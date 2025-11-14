@@ -37,7 +37,7 @@ export default function ProfileScreen() {
         <View style={styles.container}>
             {/* Header giống với orders & change-password */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.push("/(customer)/account")}>
+                <TouchableOpacity onPress={() => router.push("/account")}>
                     <Ionicons name="arrow-back" size={24} color="#fff" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>{t('profile.headerTitle')}</Text>

@@ -1,0 +1,477 @@
+import { Product, useCart } from "@/app/context/CartContext";
+import {
+  Category,
+  getCategories,
+  getProducts,
+  searchProducts,
+} from "@/app/services/firebaseService";
+import { useRouter } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+
+export default function MenuScreen() {
+  const router = useRouter();
+  const { addToCart } = useCart();
+  const [searchVisible, setSearchVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("trending");
+  const scrollViewRef = useRef<ScrollView>(null);
+  const categoryScrollRef = useRef<ScrollView>(null);
+  const categoryPositions = useRef<{ [key: string]: number }>({});
+  const categoryTabPositions = useRef<{ [key: string]: number }>({});
+
+  // Firebase state
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchResults, setSearchResults] = useState<Product[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  // Load data from Firebase
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  // Handle search
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      handleSearch();
+    } else {
+      setSearchResults([]);
+    }
+  }, [searchQuery]);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [categoriesData, productsData] = await Promise.all([
+        getCategories(),
+        getProducts(),
+      ]);
+      setCategories(categoriesData);
+      setProducts(productsData);
+    } catch (error) {
+      console.error("Error loading data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = async () => {
+    setSearching(true);
+    try {
+      const results = await searchProducts(searchQuery);
+      setSearchResults(results);
+    } catch (error) {
+      console.error("Error searching:", error);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const filteredProducts = searchQuery ? searchResults : products;
+
+  const handleCategoryPress = (categoryId: string) => {
+    setSelectedCategory(categoryId);
+    const position = categoryPositions.current[categoryId];
+    if (position !== undefined) {
+      scrollViewRef.current?.scrollTo({ y: position - 150, animated: true });
+    }
+
+    // Auto scroll category tabs
+    const tabPosition = categoryTabPositions.current[categoryId];
+    if (tabPosition !== undefined) {
+      categoryScrollRef.current?.scrollTo({
+        x: tabPosition - 50,
+        animated: true,
+      });
+    }
+  };
+
+  const handleAddToCart = (product: any) => {
+    addToCart(product, 1);
+  };
+
+  const handleProductPress = (product: any) => {
+    router.push({
+      pathname: "/(stack)/product-detail" as any,
+      params: {
+        productId: product.id,
+        collection: product.category || "burgers",
+      },
+    });
+  };
+
+  return (
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Image
+          source={{ uri: "https://via.placeholder.com/120x40?text=LOGO" }}
+          style={styles.logo}
+        />
+        <View style={styles.headerRight}>
+          {!searchVisible ? (
+            <TouchableOpacity onPress={() => setSearchVisible(true)}>
+              <Text style={styles.searchIcon}>🔍</Text>
+            </TouchableOpacity>
+          ) : (
+            <>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Tìm kiếm..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                autoFocus
+              />
+              <TouchableOpacity
+                onPress={() => {
+                  setSearchVisible(false);
+                  setSearchQuery("");
+                }}
+              >
+                <Text style={styles.closeIcon}>✕</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      </View>
+
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#e63946" />
+          <Text style={styles.loadingText}>Đang tải dữ liệu...</Text>
+        </View>
+      ) : (
+        <>
+          {/* Category Tabs */}
+          <ScrollView
+            ref={categoryScrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.categoryTabs}
+            contentContainerStyle={styles.categoryTabsContent}
+          >
+            {categories.map((category, index) => (
+              <TouchableOpacity
+                key={category.id}
+                style={[
+                  styles.categoryTab,
+                  selectedCategory === category.id && styles.categoryTabActive,
+                ]}
+                onPress={() => handleCategoryPress(category.id)}
+                onLayout={(e) => {
+                  categoryTabPositions.current[category.id] =
+                    e.nativeEvent.layout.x;
+                }}
+              >
+                <Text style={styles.categoryIcon}>{category.icon}</Text>
+                <Text
+                  style={[
+                    styles.categoryText,
+                    selectedCategory === category.id &&
+                      styles.categoryTextActive,
+                  ]}
+                >
+                  {category.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {/* Products List */}
+          <ScrollView
+            ref={scrollViewRef}
+            style={styles.content}
+            onScroll={(e) => {
+              const scrollY = e.nativeEvent.contentOffset.y;
+              // Find which category is in view
+              let foundCategory = "trending";
+              for (let i = categories.length - 1; i >= 0; i--) {
+                const categoryId = categories[i].id;
+                const position = categoryPositions.current[categoryId];
+                if (position !== undefined && scrollY >= position - 200) {
+                  foundCategory = categoryId;
+                  break;
+                }
+              }
+
+              if (foundCategory !== selectedCategory) {
+                setSelectedCategory(foundCategory);
+                // Auto scroll category tabs when scrolling content
+                const tabPosition = categoryTabPositions.current[foundCategory];
+                if (tabPosition !== undefined) {
+                  categoryScrollRef.current?.scrollTo({
+                    x: tabPosition - 50,
+                    animated: true,
+                  });
+                }
+              }
+            }}
+            scrollEventThrottle={16}
+          >
+            {searchQuery ? (
+              <View style={styles.categorySection}>
+                <Text style={styles.categoryTitle}>
+                  {searching ? "Đang tìm kiếm..." : "KẾT QUẢ TÌM KIẾM"}
+                </Text>
+                {filteredProducts.length === 0 ? (
+                  <Text style={styles.noResultsText}>
+                    Không tìm thấy sản phẩm
+                  </Text>
+                ) : (
+                  filteredProducts.map((product) => (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      onPress={() => handleProductPress(product)}
+                      onAddToCart={() => handleAddToCart(product)}
+                    />
+                  ))
+                )}
+              </View>
+            ) : (
+              categories.map((category) => {
+                const categoryProducts = products.filter(
+                  (p) => p.category === category.id
+                );
+                return (
+                  <View
+                    key={category.id}
+                    style={styles.categorySection}
+                    onLayout={(e) => {
+                      categoryPositions.current[category.id] =
+                        e.nativeEvent.layout.y;
+                    }}
+                  >
+                    <Text style={styles.categoryTitle}>
+                      {category.name.toUpperCase()}
+                    </Text>
+                    {categoryProducts.map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        onPress={() => handleProductPress(product)}
+                        onAddToCart={() => handleAddToCart(product)}
+                      />
+                    ))}
+                  </View>
+                );
+              })
+            )}
+            <View style={{ height: 100 }} />
+          </ScrollView>
+        </>
+      )}
+    </View>
+  );
+}
+
+// Product Card Component
+function ProductCard({ product, onPress, onAddToCart }: any) {
+  const imageUrl =
+    product.imageUrl || product.image || "https://via.placeholder.com/120";
+
+  return (
+    <TouchableOpacity style={styles.productCard} onPress={onPress}>
+      <Image source={{ uri: imageUrl }} style={styles.productImage} />
+      <View style={styles.productInfo}>
+        <Text style={styles.productName}>{product.name}</Text>
+        <Text style={styles.productDescription} numberOfLines={2}>
+          {product.description}
+        </Text>
+        <View style={styles.productFooter}>
+          <Text style={styles.productPrice}>
+            {product.price.toLocaleString("vi-VN")} đ
+          </Text>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={(e) => {
+              e.stopPropagation();
+              onAddToCart();
+            }}
+          >
+            <Text style={styles.addButtonText}>+</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#f5f5f5",
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+    backgroundColor: "#fff",
+    paddingTop: 50,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  logo: {
+    width: 120,
+    height: 40,
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  searchIcon: {
+    fontSize: 24,
+    marginLeft: 16,
+  },
+  searchInput: {
+    flex: 1,
+    height: 36,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    marginLeft: 8,
+    minWidth: 200,
+  },
+  closeIcon: {
+    fontSize: 24,
+    marginLeft: 12,
+    color: "#666",
+  },
+  categoryTabs: {
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+    maxHeight: 50,
+  },
+  categoryTabsContent: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    alignItems: "center",
+  },
+  categoryTab: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginHorizontal: 3,
+    borderRadius: 12,
+    backgroundColor: "#f5f5f5",
+    minHeight: 32,
+  },
+  categoryTabActive: {
+    backgroundColor: "#FFC107",
+  },
+  categoryIcon: {
+    fontSize: 14,
+    marginRight: 4,
+  },
+  categoryText: {
+    fontSize: 12,
+    color: "#666",
+    fontWeight: "600",
+  },
+  categoryTextActive: {
+    color: "#fff",
+  },
+  content: {
+    flex: 1,
+  },
+  categorySection: {
+    marginTop: 24,
+  },
+  categoryTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 16,
+    color: "#333",
+  },
+  productCard: {
+    flexDirection: "row",
+    backgroundColor: "#fff",
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: 12,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  productImage: {
+    width: 120,
+    height: 120,
+  },
+  productInfo: {
+    flex: 1,
+    padding: 12,
+    justifyContent: "space-between",
+  },
+  productName: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  productDescription: {
+    fontSize: 13,
+    color: "#666",
+    marginTop: 4,
+  },
+  productFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 8,
+  },
+  productPrice: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#FFC107",
+  },
+  addButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#FFC107",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  addButtonText: {
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: "#666",
+  },
+  noResultsText: {
+    textAlign: "center",
+    fontSize: 16,
+    color: "#666",
+    marginTop: 32,
+  },
+});
