@@ -60,7 +60,7 @@ export default function HomeScreen() {
       {/* Logo */}
       <View style={styles.header}>
         <Image
-          source={require("../image/burgerPhoMai.jpg")}
+          source={require("../../image/burgerPhoMai.jpg")}
           style={styles.logo}
         />
         <TouchableOpacity>
@@ -106,14 +106,14 @@ export default function HomeScreen() {
       <View style={styles.menuRow}>
         <View style={styles.menuCard}>
           <Image
-            source={require("../image/burgerPhoMai.jpg")}
+            source={require("../../image/burgerPhoMai.jpg")}
             style={styles.menuImage}
           />
           <Text style={styles.menuText}>KIDS MENU</Text>
         </View>
         <View style={styles.menuCard}>
           <Image
-            source={require("../image/burgerPhoMai.jpg")}
+            source={require("../../image/burgerPhoMai.jpg")}
             style={styles.menuImage}
           />
           <Text style={styles.menuText}>MENU 49K</Text>
