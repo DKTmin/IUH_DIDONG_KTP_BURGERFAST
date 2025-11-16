@@ -1,5 +1,12 @@
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { db } from "../config/firebaseConfig";
+
+export interface SizeOption {
+  name: string;
+  key: string;
+  price: number;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -9,14 +16,44 @@ export interface Product {
   categoryId?: string;
   category?: string;
   isAvailable?: boolean;
-  sizeOptions?: string[];
-  sizes?: string[];
+  sizes?: SizeOption[];
+  sizeOptions?: SizeOption[];
+  pricing?: {
+    small?: number;
+    medium?: number;
+    large?: number;
+  };
   // For drinks
   volume?: string;
   categoryID?: string;
   // For combos
   items?: string[];
   discount?: number;
+}
+
+// Helper function to convert pricing object to sizes array
+function convertPricingToSizes(pricing: any): SizeOption[] {
+  const sizes: SizeOption[] = [];
+
+  // Support both Vietnamese keys (Nhỏ, Vừa, Lớn) and English keys (small, medium, large)
+  const smallPrice =
+    pricing?.Nhỏ ?? pricing?.small ?? pricing?.nho ?? pricing?.Nho;
+  const mediumPrice =
+    pricing?.Vừa ?? pricing?.medium ?? pricing?.vua ?? pricing?.Vua;
+  const largePrice =
+    pricing?.Lớn ?? pricing?.large ?? pricing?.lon ?? pricing?.Lon;
+
+  if (typeof smallPrice === "number") {
+    sizes.push({ name: "Nhỏ", key: "small", price: smallPrice });
+  }
+  if (typeof mediumPrice === "number") {
+    sizes.push({ name: "Vừa", key: "medium", price: mediumPrice });
+  }
+  if (typeof largePrice === "number") {
+    sizes.push({ name: "Lớn", key: "large", price: largePrice });
+  }
+
+  return sizes;
 }
 
 export interface Category {
@@ -75,6 +112,9 @@ export async function getProducts(): Promise<Product[]> {
     const burgersSnapshot = await getDocs(burgersRef);
     burgersSnapshot.forEach((doc) => {
       const data = doc.data();
+      const sizes = data.pricing
+        ? convertPricingToSizes(data.pricing)
+        : data.sizeOptions || [];
       allProducts.push({
         id: doc.id,
         name: data.name || "",
@@ -82,7 +122,7 @@ export async function getProducts(): Promise<Product[]> {
         price: data.price || 0,
         imageUrl: data.imageUrl || data.image || "",
         category: data.categoryId || "burgers",
-        sizes: data.sizeOptions || [],
+        sizes: sizes,
         isAvailable: data.isAvailable !== false,
       } as Product);
     });
@@ -154,7 +194,9 @@ export async function getProductsByCategory(
 
       snapshot.forEach((doc) => {
         const data = doc.data();
-        // You can add tags field in Firestore to filter by spicy/veggie
+        const sizes = data.pricing
+          ? convertPricingToSizes(data.pricing)
+          : data.sizeOptions || [];
         products.push({
           id: doc.id,
           name: data.name || "",
@@ -162,7 +204,7 @@ export async function getProductsByCategory(
           price: data.price || 0,
           imageUrl: data.imageUrl || data.image || "",
           category: "burgers",
-          sizes: data.sizeOptions || [],
+          sizes: sizes,
           isAvailable: data.isAvailable !== false,
         } as Product);
       });
@@ -176,6 +218,9 @@ export async function getProductsByCategory(
     const products: Product[] = [];
     snapshot.forEach((doc) => {
       const data = doc.data();
+      const sizes = data.pricing
+        ? convertPricingToSizes(data.pricing)
+        : data.sizeOptions || [];
       products.push({
         id: doc.id,
         name: data.name || "",
@@ -183,7 +228,7 @@ export async function getProductsByCategory(
         price: data.price || 0,
         imageUrl: data.imageUrl || data.image || "",
         category: categoryId,
-        sizes: data.sizeOptions || [],
+        sizes: sizes,
         items: data.items || [],
         volume: data.volume || "",
         isAvailable: data.isAvailable !== false,
@@ -218,6 +263,9 @@ export async function getProductById(
 
       const data = snapshot.data();
       if (coll === "burgers") {
+        const sizes = data.pricing
+          ? convertPricingToSizes(data.pricing)
+          : data.sizeOptions || [];
         return {
           id: snapshot.id,
           name: data.name || "",
@@ -225,7 +273,7 @@ export async function getProductById(
           price: data.price || 0,
           imageUrl: data.imageUrl || data.image || "",
           category: "burgers",
-          sizes: data.sizeOptions || [],
+          sizes: sizes,
           isAvailable: data.isAvailable !== false,
         } as Product;
       }

@@ -10,6 +10,7 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -35,6 +36,9 @@ export default function MenuScreen() {
   const [loading, setLoading] = useState(true);
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [searching, setSearching] = useState(false);
+  const [sizeModalVisible, setSizeModalVisible] = useState(false);
+  const [selectedProductForSize, setSelectedProductForSize] =
+    useState<Product | null>(null);
 
   // Load data from Firebase
   useEffect(() => {
@@ -98,7 +102,14 @@ export default function MenuScreen() {
   };
 
   const handleAddToCart = (product: any) => {
-    addToCart(product, 1);
+    // Nếu có size, hiển thị modal để chọn size
+    if (product.sizes && product.sizes.length > 0) {
+      setSelectedProductForSize(product);
+      setSizeModalVisible(true);
+    } else {
+      // Nếu không có size, thêm vào giỏ trực tiếp với giá mặc định
+      addToCart(product, 1);
+    }
   };
 
   const handleProductPress = (product: any) => {
@@ -272,7 +283,93 @@ export default function MenuScreen() {
           </ScrollView>
         </>
       )}
+
+      {/* Size Selection Modal */}
+      <SizeSelectionModal
+        visible={sizeModalVisible}
+        product={selectedProductForSize}
+        onClose={() => {
+          setSizeModalVisible(false);
+          setSelectedProductForSize(null);
+        }}
+        onConfirm={(
+          product: any,
+          qty: number,
+          sizeName: string,
+          sizePrice: number
+        ) => {
+          addToCart(product, qty, sizeName, sizePrice);
+        }}
+      />
     </View>
+  );
+}
+
+// Size Selection Modal Component
+function SizeSelectionModal({ visible, product, onClose, onConfirm }: any) {
+  const [selectedSize, setSelectedSize] = useState<any>(null);
+
+  const handleConfirm = () => {
+    if (selectedSize) {
+      onConfirm(product, 1, selectedSize.name, selectedSize.price);
+      setSelectedSize(null);
+      onClose();
+    }
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <Text style={styles.modalTitle}>Chọn size cho {product?.name}</Text>
+
+          <View style={styles.modalSizeOptions}>
+            {product?.sizes?.map((size: any) => (
+              <TouchableOpacity
+                key={size.key}
+                style={[
+                  styles.modalSizeButton,
+                  selectedSize?.key === size.key &&
+                    styles.modalSizeButtonActive,
+                ]}
+                onPress={() => setSelectedSize(size)}
+              >
+                <Text
+                  style={[
+                    styles.modalSizeButtonText,
+                    selectedSize?.key === size.key &&
+                      styles.modalSizeButtonTextActive,
+                  ]}
+                >
+                  {size.name} - {size.price.toLocaleString("vi-VN")} đ
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={styles.modalButtons}>
+            <TouchableOpacity style={styles.modalCancelBtn} onPress={onClose}>
+              <Text style={styles.modalCancelBtnText}>Hủy</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.modalConfirmBtn,
+                !selectedSize && styles.modalConfirmBtnDisabled,
+              ]}
+              onPress={handleConfirm}
+              disabled={!selectedSize}
+            >
+              <Text style={styles.modalConfirmBtnText}>Thêm vào giỏ</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -280,6 +377,13 @@ export default function MenuScreen() {
 function ProductCard({ product, onPress, onAddToCart }: any) {
   const imageUrl =
     product.imageUrl || product.image || "https://via.placeholder.com/120";
+
+  // Get small size price for burgers, otherwise use default price
+  const displayPrice =
+    product.sizes && product.sizes.length > 0
+      ? product.sizes.find((s: any) => s.key === "small")?.price ||
+        product.price
+      : product.price;
 
   return (
     <TouchableOpacity style={styles.productCard} onPress={onPress}>
@@ -291,7 +395,7 @@ function ProductCard({ product, onPress, onAddToCart }: any) {
         </Text>
         <View style={styles.productFooter}>
           <Text style={styles.productPrice}>
-            {product.price.toLocaleString("vi-VN")} đ
+            {displayPrice.toLocaleString("vi-VN")} đ
           </Text>
           <TouchableOpacity
             style={styles.addButton}
@@ -473,5 +577,84 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#666",
     marginTop: 32,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    paddingBottom: 40,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  modalSizeOptions: {
+    gap: 12,
+    marginBottom: 20,
+  },
+  modalSizeButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: "#ddd",
+    backgroundColor: "#fff",
+  },
+  modalSizeButtonActive: {
+    borderColor: "#FFC107",
+    backgroundColor: "#FFC107",
+  },
+  modalSizeButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
+    textAlign: "center",
+  },
+  modalSizeButtonTextActive: {
+    color: "#fff",
+  },
+  modalButtons: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: "#ddd",
+    backgroundColor: "#fff",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalCancelBtnText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  modalConfirmBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: "#FFC107",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalConfirmBtnDisabled: {
+    opacity: 0.5,
+  },
+  modalConfirmBtnText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#fff",
   },
 });
