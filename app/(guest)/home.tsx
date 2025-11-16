@@ -1,45 +1,54 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { onAuthStateChanged } from "firebase/auth";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from "react-native";
 import { auth } from "../config/firebaseConfig";
+import { Category, Product as FirebaseProduct, getCategories, getProducts } from "../services/firebaseService";
 
 export default function HomeScreen() {
-  const [burgers, setBurgers] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [products, setProducts] = useState<FirebaseProduct[]>([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
-  // Khách không cần xác thực Firebase - chỉ tải dữ liệu
   useEffect(() => {
-    // Khách có thể tiếp tục mà không cần đăng nhập
     const unsubscribe = onAuthStateChanged(auth, () => {
-      // Người dùng có thể là khách hoặc đã đăng nhập
+      // Guest can continue without login
     });
     return unsubscribe;
   }, []);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const loadData = async () => {
+      setLoading(true);
       try {
-        const res = await fetch("https://6900db32ff8d792314bbc8f2.mockapi.io/burgers");
-        const data = await res.json();
-        setBurgers(data);
-      } catch {
-        Alert.alert("Lỗi", "Không thể tải dữ liệu. Vui lòng thử lại.");
+        const [cats, prods] = await Promise.all([getCategories(), getProducts()]);
+        setCategories(cats || []);
+        setProducts(prods || []);
+      } catch (error) {
+        console.error("Error loading data:", error);
+        // Guest users have limited access - continue with empty data
+        setCategories([]);
+        setProducts([]);
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
+    loadData();
   }, []);
+
+  const handleNavigateToAuth = () => {
+    router.push("/auth/register");
+  };
 
   if (loading)
     return (
@@ -52,69 +61,72 @@ export default function HomeScreen() {
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Logo */}
       <View style={styles.header}>
-        <Image
-          source={require("../image/burgerPhoMai.jpg")}
-          style={styles.logo}
-        />
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <Image
+            source={require("../image/burgerPhoMai-Photoroom.png")}
+            style={styles.logo}
+          />
+          <Text style={styles.brandName}>BURGERFAST</Text>
+        </View>
         <TouchableOpacity>
           <Ionicons name="notifications-outline" size={26} color="#333" />
         </TouchableOpacity>
       </View>
 
-      {/* Vị trí */}
-      <TouchableOpacity style={styles.locationBox}>
-        <Ionicons name="location-outline" size={20} color="#FFC107" />
-        <View style={{ marginLeft: 8 }}>
-          <Text style={{ fontWeight: "600", color: "#333" }}>Tìm cửa hàng gần bạn</Text>
-          <Text style={{ fontSize: 13, color: "#777" }}>
-            Để xem ưu đãi, phiếu giảm giá...
-          </Text>
-        </View>
-      </TouchableOpacity>
-
       {/* Mục bạn sẽ thích */}
       <Text style={styles.sectionTitle}>Bạn sẽ thích</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {burgers.slice(0, 5).map((item) => (
-          <View key={item.id} style={styles.suggestCard}>
-            <Image source={{ uri: item.image }} style={styles.suggestImage} />
-            <Text style={styles.suggestName}>{item.name}</Text>
-            <Text style={styles.suggestPrice}>
-              Chỉ từ {item.price.toLocaleString()}₫
-            </Text>
-            <TouchableOpacity style={styles.addBtn}>
-              <Ionicons name="add" size={20} color="#fff" />
+        {products
+          .filter((p) => p.category === "burgers")
+          .slice(0, 5)
+          .map((item) => (
+            <TouchableOpacity
+              key={item.id}
+              style={styles.suggestCard}
+              onPress={handleNavigateToAuth}
+            >
+              <Image source={{ uri: item.imageUrl || "" }} style={styles.suggestImage} />
+              <Text style={styles.suggestName}>{item.name}</Text>
+              <Text style={styles.suggestPrice}>
+                Chỉ từ {item.price.toLocaleString()}₫
+              </Text>
+              <TouchableOpacity
+                style={styles.addBtn}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  handleNavigateToAuth();
+                }}
+              >
+                <Ionicons name="add" size={20} color="#fff" />
+              </TouchableOpacity>
             </TouchableOpacity>
-          </View>
-        ))}
+          ))}
       </ScrollView>
 
       {/* Menu */}
       <View style={styles.menuHeader}>
         <Text style={styles.sectionTitle}>Menu</Text>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={handleNavigateToAuth}>
           <Text style={{ color: "#FFC107", fontWeight: "500" }}>Xem thêm</Text>
         </TouchableOpacity>
       </View>
-      <View style={styles.menuRow}>
-        <View style={styles.menuCard}>
-          <Image
-            source={require("../image/burgerPhoMai.jpg")}
-            style={styles.menuImage}
-          />
-          <Text style={styles.menuText}>KIDS MENU</Text>
-        </View>
-        <View style={styles.menuCard}>
-          <Image
-            source={require("../image/burgerPhoMai.jpg")}
-            style={styles.menuImage}
-          />
-          <Text style={styles.menuText}>MENU 49K</Text>
-        </View>
-      </View>
+
+      {/* Category Tabs */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 6, marginBottom: 8 }}>
+        {categories.map((cat) => (
+          <TouchableOpacity
+            key={cat.id}
+            style={[styles.categoryTab, styles.categoryTabActive]}
+            onPress={handleNavigateToAuth}
+          >
+            <Text style={styles.categoryIcon}>{cat.icon}</Text>
+            <Text style={[styles.categoryText, styles.categoryTextActive]}>{cat.name}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
 
       {/* Các mục tiện ích */}
-      <TouchableOpacity style={styles.optionBox}>
+      <TouchableOpacity style={styles.optionBox} onPress={handleNavigateToAuth}>
         <Ionicons name="bag-outline" size={22} color="#FFC107" />
         <View>
           <Text style={styles.optionTitle}>Theo dõi đơn hàng</Text>
@@ -122,7 +134,7 @@ export default function HomeScreen() {
         </View>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.optionBox}>
+      <TouchableOpacity style={styles.optionBox} onPress={handleNavigateToAuth}>
         <Ionicons name="storefront-outline" size={22} color="#FFC107" />
         <View>
           <Text style={styles.optionTitle}>Cửa hàng của chúng tôi</Text>
@@ -134,7 +146,7 @@ export default function HomeScreen() {
       <Text style={styles.sectionTitle}>Kết nối với BurgerFast</Text>
 
       <TouchableOpacity style={styles.optionBox}>
-        <Ionicons name="call-outline" size={22} color="#e6e91bff" />
+        <Ionicons name="call-outline" size={22} color="#FFC107" />
         <View>
           <Text style={styles.optionTitle}>Cần trợ giúp?</Text>
           <Text style={styles.optionDesc}>Gọi 1900 1822</Text>
@@ -147,8 +159,6 @@ export default function HomeScreen() {
           <Text style={styles.optionTitle}>Điều khoản và Điều kiện</Text>
         </View>
       </TouchableOpacity>
-
-   
     </ScrollView>
   );
 }
@@ -163,14 +173,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   logo: { width: 110, height: 45, resizeMode: "contain" },
-  locationBox: {
-    backgroundColor: "#fff5f5",
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    borderRadius: 12,
-    marginTop: 10,
-  },
+  brandName: { fontSize: 18, fontWeight: "800", marginLeft: 10, color: "#333" },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
@@ -202,21 +205,21 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  menuRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 10 },
-  menuCard: {
-    width: "48%",
-    borderRadius: 12,
-    backgroundColor: "#fff5f5",
-    overflow: "hidden",
-    elevation: 3,
+  categoryTab: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    marginHorizontal: 10,
+    borderRadius: 20,
+    backgroundColor: "#f5f5f5",
   },
-  menuImage: { width: "100%", height: 120, resizeMode: "cover" },
-  menuText: {
-    textAlign: "center",
-    fontWeight: "600",
-    paddingVertical: 8,
-    color: "#333",
+  categoryTabActive: {
+    backgroundColor: "#ebebb0ff",
   },
+  categoryIcon: { fontSize: 32, marginRight: 12 },
+  categoryText: { fontSize: 18, color: "#666", fontWeight: "700" },
+  categoryTextActive: { color: "#fff" },
   optionBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -226,14 +229,4 @@ const styles = StyleSheet.create({
   optionTitle: { fontWeight: "600", color: "#333" },
   optionDesc: { color: "#777", fontSize: 13 },
   divider: { height: 1, backgroundColor: "#eee", marginVertical: 15 },
-  logoutBtn: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#FFC107",
-    paddingVertical: 12,
-    borderRadius: 10,
-    marginVertical: 30,
-  },
-  logoutText: { color: "#fff", marginLeft: 6, fontWeight: "600" },
 });

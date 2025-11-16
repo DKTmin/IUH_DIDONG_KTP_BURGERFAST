@@ -1,6 +1,8 @@
+import { useCart } from "@/app/context/CartContext";
+import { Category, Product as FirebaseProduct, getCategories, getProducts } from "@/app/services/firebaseService";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -15,38 +17,38 @@ import {
 import { auth } from "../../config/firebaseConfig";
 
 export default function HomeScreen() {
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [burgers, setBurgers] = useState<any[]>([]);
+  // no local user state needed here; auth listener will redirect if not logged in
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [products, setProducts] = useState<FirebaseProduct[]>([]);
   const [loading, setLoading] = useState(true);
+  const { addToCart } = useCart();
   const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) setUserEmail(user.email);
-      else router.replace("/auth/login");
+      if (!user) router.replace("/auth/login");
     });
     return unsubscribe;
-  }, []);
+  }, [router]);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const loadData = async () => {
+      setLoading(true);
       try {
-        const res = await fetch("https://6900db32ff8d792314bbc8f2.mockapi.io/burgers");
-        const data = await res.json();
-        setBurgers(data);
+        const [cats, prods] = await Promise.all([getCategories(), getProducts()]);
+        setCategories(cats);
+        setProducts(prods);
       } catch (error) {
+        console.error("Error loading data:", error);
         Alert.alert("Lỗi", "Không thể tải dữ liệu. Vui lòng thử lại.");
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
+    loadData();
   }, []);
 
-  const handleLogout = async () => {
-    await signOut(auth);
-    router.replace("/auth/login");
-  };
+  
 
   if (loading)
     return (
@@ -59,69 +61,83 @@ export default function HomeScreen() {
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Logo */}
       <View style={styles.header}>
-        <Image
-          source={require("../../image/burgerPhoMai.jpg")}
-          style={styles.logo}
-        />
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <Image
+            source={require("../../image/burgerPhoMai-Photoroom.png")}
+            style={styles.logo}
+          />
+          <Text style={styles.brandName}>BURGERFAST</Text>
+        </View>
         <TouchableOpacity>
           <Ionicons name="notifications-outline" size={26} color="#333" />
         </TouchableOpacity>
       </View>
 
       {/* Vị trí */}
-      <TouchableOpacity style={styles.locationBox}>
-        <Ionicons name="location-outline" size={20} color="#FFC107" />
-        <View style={{ marginLeft: 8 }}>
-          <Text style={{ fontWeight: "600", color: "#333" }}>Tìm cửa hàng gần bạn</Text>
-          <Text style={{ fontSize: 13, color: "#777" }}>
-            Để xem ưu đãi, phiếu giảm giá...
-          </Text>
-        </View>
-      </TouchableOpacity>
+     
 
       {/* Mục bạn sẽ thích */}
       <Text style={styles.sectionTitle}>Bạn sẽ thích</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {burgers.slice(0, 5).map((item) => (
-          <View key={item.id} style={styles.suggestCard}>
-            <Image source={{ uri: item.image }} style={styles.suggestImage} />
-            <Text style={styles.suggestName}>{item.name}</Text>
-            <Text style={styles.suggestPrice}>
-              Chỉ từ {item.price.toLocaleString()}₫
-            </Text>
-            <TouchableOpacity style={styles.addBtn}>
-              <Ionicons name="add" size={20} color="#fff" />
+        {products
+          .filter((p) => p.category === "burgers")
+          .slice(0, 5)
+          .map((item) => (
+            <TouchableOpacity
+              key={item.id}
+              style={styles.suggestCard}
+              onPress={() =>
+                router.push({ pathname: "/(stack)/product-detail" as any, params: { productId: item.id, collection: "products" } })
+              }
+            >
+              <Image source={{ uri: item.imageUrl || "" }} style={styles.suggestImage} />
+              <Text style={styles.suggestName}>{item.name}</Text>
+              <Text style={styles.suggestPrice}>
+                Chỉ từ {item.price.toLocaleString()}₫
+              </Text>
+              <TouchableOpacity
+                style={styles.addBtn}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  addToCart(item, 1);
+                }}
+              >
+                <Ionicons name="add" size={20} color="#fff" />
+              </TouchableOpacity>
             </TouchableOpacity>
-          </View>
-        ))}
+          ))}
       </ScrollView>
 
       {/* Menu */}
+      {/* Menu: categories + products */}
       <View style={styles.menuHeader}>
         <Text style={styles.sectionTitle}>Menu</Text>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => router.push({ pathname: "/(tabs)/menu" as any })}>
           <Text style={{ color: "#FFC107", fontWeight: "500" }}>Xem thêm</Text>
         </TouchableOpacity>
       </View>
-      <View style={styles.menuRow}>
-        <View style={styles.menuCard}>
-          <Image
-            source={require("../../image/burgerPhoMai.jpg")}
-            style={styles.menuImage}
-          />
-          <Text style={styles.menuText}>KIDS MENU</Text>
-        </View>
-        <View style={styles.menuCard}>
-          <Image
-            source={require("../../image/burgerPhoMai.jpg")}
-            style={styles.menuImage}
-          />
-          <Text style={styles.menuText}>MENU 49K</Text>
-        </View>
-      </View>
+
+      {/* Category Tabs */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 6, marginBottom: 8 }}>
+        {categories.map((cat) => (
+          <TouchableOpacity
+            key={cat.id}
+            style={[styles.categoryTab, styles.categoryTabActive]}
+            onPress={() => {
+              // Navigate to menu and open the selected category
+              router.push({ pathname: "/(tabs)/menu" as any, params: { categoryId: cat.id } });
+            }}
+          >
+            <Text style={styles.categoryIcon}>{cat.icon}</Text>
+            <Text style={[styles.categoryText, styles.categoryTextActive]}>{cat.name}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      
 
       {/* Các mục tiện ích */}
-      <TouchableOpacity style={styles.optionBox}>
+      <TouchableOpacity style={styles.optionBox} onPress={() => router.push({ pathname: "/(stack)/orders" as any })}>
         <Ionicons name="bag-outline" size={22} color="#FFC107" />
         <View>
           <Text style={styles.optionTitle}>Theo dõi đơn hàng</Text>
@@ -129,7 +145,7 @@ export default function HomeScreen() {
         </View>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.optionBox}>
+      <TouchableOpacity style={styles.optionBox} onPress={() => router.push({ pathname: "/(stack)/stores" as any })}>
         <Ionicons name="storefront-outline" size={22} color="#FFC107" />
         <View>
           <Text style={styles.optionTitle}>Cửa hàng của chúng tôi</Text>
@@ -141,7 +157,7 @@ export default function HomeScreen() {
       <Text style={styles.sectionTitle}>Kết nối với BurgerFast</Text>
 
       <TouchableOpacity style={styles.optionBox}>
-        <Ionicons name="call-outline" size={22} color="#e6e91bff" />
+        <Ionicons name="call-outline" size={22} color="#FFC107" />
         <View>
           <Text style={styles.optionTitle}>Cần trợ giúp?</Text>
           <Text style={styles.optionDesc}>Gọi 1900 1822</Text>
@@ -156,13 +172,12 @@ export default function HomeScreen() {
       </TouchableOpacity>
 
       {/* Logout */}
-      <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-        <Ionicons name="log-out-outline" size={20} color="#fff" />
-        <Text style={styles.logoutText}>Đăng xuất</Text>
-      </TouchableOpacity>
+     
     </ScrollView>
   );
 }
+
+
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff", paddingHorizontal: 16 },
@@ -174,6 +189,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   logo: { width: 110, height: 45, resizeMode: "contain" },
+  brandName: { fontSize: 18, fontWeight: "800", marginLeft: 10, color: "#333" },
   locationBox: {
     backgroundColor: "#fff5f5",
     flexDirection: "row",
@@ -228,6 +244,43 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     color: "#333",
   },
+  categoryTab: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    marginHorizontal: 10,
+    borderRadius: 20,
+    backgroundColor: "#f5f5f5",
+  },
+  categoryTabActive: {
+    backgroundColor: "#ebebb0ff",
+  },
+  categoryIcon: { fontSize: 32, marginRight: 12 },
+  categoryText: { fontSize: 18, color: "#666", fontWeight: "700" },
+  categoryTextActive: { color: "#fff" },
+  productCard: {
+    flexDirection: "row",
+    backgroundColor: "#fff",
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: 12,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  productImage: { width: 120, height: 120 },
+  productInfo: { flex: 1, padding: 12, justifyContent: "space-between" },
+  productName: { fontSize: 16, fontWeight: "bold", color: "#333" },
+  productDescription: { fontSize: 13, color: "#666", marginTop: 4 },
+  productFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 8 },
+  productPrice: { fontSize: 16, fontWeight: "bold", color: "#FFC107" },
+  addButton: { width: 32, height: 32, borderRadius: 16, backgroundColor: "#FFC107", justifyContent: "center", alignItems: "center" },
+  addButtonText: { color: "#fff", fontSize: 20, fontWeight: "bold" },
+  
   optionBox: {
     flexDirection: "row",
     alignItems: "center",
