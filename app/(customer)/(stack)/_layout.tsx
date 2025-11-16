@@ -6,6 +6,7 @@ export default function CustomerStackLayout() {
         <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="profile" />
             <Stack.Screen name="orders" />
+            <Stack.Screen name="terms" />
             <Stack.Screen name="change-password" />
         </Stack>
     );

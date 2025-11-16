@@ -39,10 +39,10 @@ export default function GuestAccount() {
             <View style={styles.optionBox}>
                 <TouchableOpacity
                     style={styles.optionItem}
-                    onPress={() => router.push("/(guest)/(stack)/orders")}
+                    onPress={() => router.push("/(guest)/(stack)/terms")}
                 >
-                    <Ionicons name="receipt-outline" size={22} color="#333" />
-                    <Text style={styles.optionText}>{t('guestAccount.trackOrders')}</Text>
+                    <Ionicons name="document-text-outline" size={22} color="#333" />
+                    <Text style={styles.optionText}>{t('common.termsAndConditions')}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity

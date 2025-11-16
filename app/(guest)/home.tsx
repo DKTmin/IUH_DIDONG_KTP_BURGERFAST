@@ -47,7 +47,11 @@ export default function HomeScreen() {
   }, []);
 
   const handleNavigateToAuth = () => {
-    router.push("/auth/register");
+    router.push("/auth/login");
+  };
+
+  const handleNavigateToStores = () => {
+    router.push("/(guest)/(stack)/stores");
   };
 
   if (loading)
@@ -83,12 +87,16 @@ export default function HomeScreen() {
             <TouchableOpacity
               key={item.id}
               style={styles.suggestCard}
-              onPress={handleNavigateToAuth}
+              onPress={() => router.push({ pathname: "/(stack)/product-detail" as any, params: { productId: item.id, collection: item.category || "burgers" } })}
             >
               <Image source={{ uri: item.imageUrl || "" }} style={styles.suggestImage} />
-              <Text style={styles.suggestName}>{item.name}</Text>
+              <Text style={styles.suggestName} numberOfLines={2} ellipsizeMode="tail">{item.name}</Text>
               <Text style={styles.suggestPrice}>
-                Chỉ từ {item.price.toLocaleString()}₫
+                {(() => {
+                  const smallPrice = item.sizes?.find((s) => s.key === "small")?.price;
+                  const display = typeof smallPrice === "number" ? smallPrice : item.price || 0;
+                  return `Chỉ từ ${display.toLocaleString()}₫`;
+                })()}
               </Text>
               <TouchableOpacity
                 style={styles.addBtn}
@@ -106,7 +114,7 @@ export default function HomeScreen() {
       {/* Menu */}
       <View style={styles.menuHeader}>
         <Text style={styles.sectionTitle}>Menu</Text>
-        <TouchableOpacity onPress={handleNavigateToAuth}>
+        <TouchableOpacity onPress={() => router.push({ pathname: "/(guest)/menu" as any })}>
           <Text style={{ color: "#FFC107", fontWeight: "500" }}>Xem thêm</Text>
         </TouchableOpacity>
       </View>
@@ -117,7 +125,7 @@ export default function HomeScreen() {
           <TouchableOpacity
             key={cat.id}
             style={[styles.categoryTab, styles.categoryTabActive]}
-            onPress={handleNavigateToAuth}
+            onPress={() => router.push({ pathname: "/(guest)/menu" as any, params: { categoryId: cat.id } })}
           >
             <Text style={styles.categoryIcon}>{cat.icon}</Text>
             <Text style={[styles.categoryText, styles.categoryTextActive]}>{cat.name}</Text>
@@ -134,7 +142,7 @@ export default function HomeScreen() {
         </View>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.optionBox} onPress={handleNavigateToAuth}>
+      <TouchableOpacity style={styles.optionBox} onPress={handleNavigateToStores}>
         <Ionicons name="storefront-outline" size={22} color="#FFC107" />
         <View>
           <Text style={styles.optionTitle}>Cửa hàng của chúng tôi</Text>
@@ -153,7 +161,7 @@ export default function HomeScreen() {
         </View>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.optionBox}>
+      <TouchableOpacity style={styles.optionBox} onPress={() => router.push("/(guest)/(stack)/terms")}>
         <Ionicons name="document-text-outline" size={22} color="#FFC107" />
         <View>
           <Text style={styles.optionTitle}>Điều khoản và Điều kiện</Text>
@@ -190,7 +198,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   suggestImage: { width: "100%", height: 100, borderRadius: 10 },
-  suggestName: { fontWeight: "600", marginTop: 8 },
+  suggestName: { fontWeight: "600", marginTop: 8, height: 40 },
   suggestPrice: { color: "#FFC107", marginTop: 4 },
   addBtn: {
     position: "absolute",

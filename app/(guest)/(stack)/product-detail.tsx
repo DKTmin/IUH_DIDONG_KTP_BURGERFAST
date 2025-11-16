@@ -115,7 +115,7 @@ export default function GuestProductDetailScreen() {
       [
         {
           text: "Hủy",
-          onPress: () => {},
+          onPress: () => { },
           style: "cancel",
         },
         {
@@ -129,20 +129,7 @@ export default function GuestProductDetailScreen() {
   };
 
   const handleOrder = () => {
-    // Show login prompt for guest users
-    Alert.alert("Vui lòng đăng nhập", "Bạn cần đăng nhập để đặt hàng", [
-      {
-        text: "Hủy",
-        onPress: () => {},
-        style: "cancel",
-      },
-      {
-        text: "Đăng nhập",
-        onPress: () => {
-          router.push("/auth/login");
-        },
-      },
-    ]);
+    router.push("/auth/login");
   };
 
   return (
@@ -197,7 +184,7 @@ export default function GuestProductDetailScreen() {
                         style={[
                           styles.sizeButtonText,
                           selectedSize === size.name &&
-                            styles.sizeButtonTextActive,
+                          styles.sizeButtonTextActive,
                         ]}
                       >
                         {size.name} - {size.price.toLocaleString("vi-VN")} đ

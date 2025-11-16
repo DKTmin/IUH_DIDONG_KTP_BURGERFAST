@@ -5,7 +5,7 @@ import {
   getProducts,
   searchProducts,
 } from "@/app/services/firebaseService";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -21,6 +21,7 @@ import {
 
 export default function MenuScreen() {
   const router = useRouter();
+  const { categoryId } = useLocalSearchParams() as { categoryId?: string };
   const { addToCart } = useCart();
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -44,6 +45,17 @@ export default function MenuScreen() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // If navigated here with a categoryId param, select that category once categories are loaded
+  useEffect(() => {
+    if (categoryId && categories.length > 0) {
+      // small delay to allow layout/onLayout handlers to populate positions refs
+      const id = setTimeout(() => {
+        handleCategoryPress(categoryId);
+      }, 80);
+      return () => clearTimeout(id);
+    }
+  }, [categoryId, categories]);
 
   // Handle search
   useEffect(() => {
@@ -169,7 +181,7 @@ export default function MenuScreen() {
                   style={[
                     styles.categoryText,
                     selectedCategory === category.id &&
-                      styles.categoryTextActive,
+                    styles.categoryTextActive,
                   ]}
                 >
                   {category.name}
@@ -347,7 +359,7 @@ function SizeSelectionModal({ visible, product, onClose, onConfirm }: any) {
                 style={[
                   styles.modalSizeButton,
                   selectedSize?.key === size.key &&
-                    styles.modalSizeButtonActive,
+                  styles.modalSizeButtonActive,
                 ]}
                 onPress={() => setSelectedSize(size)}
               >
@@ -355,7 +367,7 @@ function SizeSelectionModal({ visible, product, onClose, onConfirm }: any) {
                   style={[
                     styles.modalSizeButtonText,
                     selectedSize?.key === size.key &&
-                      styles.modalSizeButtonTextActive,
+                    styles.modalSizeButtonTextActive,
                   ]}
                 >
                   {size.name} - {size.price.toLocaleString("vi-VN")} đ
@@ -394,7 +406,7 @@ function ProductCard({ product, onPress, onAddToCart }: any) {
   const displayPrice =
     product.sizes && product.sizes.length > 0
       ? product.sizes.find((s: any) => s.key === "small")?.price ||
-        product.price
+      product.price
       : product.price;
 
   return (
