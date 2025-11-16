@@ -127,6 +127,15 @@ export default function CustomerAccount() {
           </Text>
         </TouchableOpacity>
 
+
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => router.push("/(stack)/terms" as any)}
+        >
+          <Ionicons name="document-text-outline" size={22} color="#333" />
+          <Text style={styles.menuText}>{t('common.termsAndConditions')}</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.menuItem}>
           <Ionicons name="language-outline" size={22} color="#333" />
           <TouchableOpacity onPress={() => setLanguageModalVisible(true)}>
