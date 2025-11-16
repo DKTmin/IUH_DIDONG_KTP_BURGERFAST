@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   SafeAreaView,
   ScrollView,
@@ -22,6 +23,9 @@ export default function ProductDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string | undefined>();
+  const [selectedSizePrice, setSelectedSizePrice] = useState<
+    number | undefined
+  >();
 
   useEffect(() => {
     loadProduct();
@@ -37,7 +41,15 @@ export default function ProductDetailScreen() {
         typeof collection === "string" ? collection : undefined
       );
       setProduct(productData);
-      // ...
+
+      // Auto select small size if product has sizes
+      if (productData?.sizes && productData.sizes.length > 0) {
+        const smallSize = productData.sizes.find((s) => s.key === "small");
+        if (smallSize) {
+          setSelectedSize(smallSize.name);
+          setSelectedSizePrice(smallSize.price);
+        }
+      }
     } catch (error) {
       console.error("Error loading product:", error);
     } finally {
@@ -82,11 +94,19 @@ export default function ProductDetailScreen() {
   };
 
   const handleAddToCart = () => {
-    addToCart(product, quantity, selectedSize);
+    if (product?.sizes && product.sizes.length > 0 && !selectedSize) {
+      Alert.alert("Thông báo", "Vui lòng chọn size");
+      return;
+    }
+    addToCart(product, quantity, selectedSize, selectedSizePrice);
   };
 
   const handleOrder = () => {
-    addToCart(product, quantity, selectedSize);
+    if (product?.sizes && product.sizes.length > 0 && !selectedSize) {
+      Alert.alert("Thông báo", "Vui lòng chọn size");
+      return;
+    }
+    addToCart(product, quantity, selectedSize, selectedSizePrice);
     router.push("/cart" as any);
   };
 
@@ -113,34 +133,44 @@ export default function ProductDetailScreen() {
           <Text style={styles.productName}>{product.name}</Text>
           <Text style={styles.productDescription}>{product.description}</Text>
           <Text style={styles.productPrice}>
-            {product.price.toLocaleString("vi-VN")} đ
+            {(selectedSizePrice || product.price).toLocaleString("vi-VN")} đ
           </Text>
 
           {/* Size Selection */}
-          {product.sizes && (
+          {product.sizes && product.sizes.length > 0 && (
             <View style={styles.sizeSection}>
               <Text style={styles.sectionTitle}>Chọn size:</Text>
-              <View style={styles.sizeOptions}>
-                {product.sizes.map((size) => (
-                  <TouchableOpacity
-                    key={size}
-                    style={[
-                      styles.sizeButton,
-                      selectedSize === size && styles.sizeButtonActive,
-                    ]}
-                    onPress={() => setSelectedSize(size)}
-                  >
-                    <Text
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 4 }}
+              >
+                <View style={styles.sizeOptions}>
+                  {product.sizes.map((size) => (
+                    <TouchableOpacity
+                      key={size.key}
                       style={[
-                        styles.sizeButtonText,
-                        selectedSize === size && styles.sizeButtonTextActive,
+                        styles.sizeButton,
+                        selectedSize === size.name && styles.sizeButtonActive,
                       ]}
+                      onPress={() => {
+                        setSelectedSize(size.name);
+                        setSelectedSizePrice(size.price);
+                      }}
                     >
-                      {size}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+                      <Text
+                        style={[
+                          styles.sizeButtonText,
+                          selectedSize === size.name &&
+                            styles.sizeButtonTextActive,
+                        ]}
+                      >
+                        {size.name} - {size.price.toLocaleString("vi-VN")} đ
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
             </View>
           )}
 

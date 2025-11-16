@@ -1,5 +1,11 @@
 import React, { createContext, ReactNode, useContext, useState } from "react";
 
+export interface SizeOption {
+  name: string;
+  key: string;
+  price: number;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -9,8 +15,8 @@ export interface Product {
   image?: string;
   category?: string;
   categoryId?: string;
-  sizes?: string[];
-  sizeOptions?: string[];
+  sizes?: SizeOption[];
+  sizeOptions?: SizeOption[];
   // For drinks
   volume?: string;
   categoryID?: string;
@@ -23,11 +29,17 @@ export interface Product {
 export interface CartItem extends Product {
   quantity: number;
   selectedSize?: string;
+  selectedSizePrice?: number;
 }
 
 interface CartContextType {
   cartItems: CartItem[];
-  addToCart: (product: Product, quantity?: number, size?: string) => void;
+  addToCart: (
+    product: Product,
+    quantity?: number,
+    size?: string,
+    sizePrice?: number
+  ) => void;
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
@@ -40,7 +52,12 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
-  const addToCart = (product: Product, quantity: number = 1, size?: string) => {
+  const addToCart = (
+    product: Product,
+    quantity: number = 1,
+    size?: string,
+    sizePrice?: number
+  ) => {
     setCartItems((prevItems) => {
       const existingItem = prevItems.find(
         (item) => item.id === product.id && item.selectedSize === size
@@ -54,7 +71,15 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         );
       }
 
-      return [...prevItems, { ...product, quantity, selectedSize: size }];
+      return [
+        ...prevItems,
+        {
+          ...product,
+          quantity,
+          selectedSize: size,
+          selectedSizePrice: sizePrice,
+        },
+      ];
     });
   };
 
@@ -86,10 +111,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const getTotalPrice = () => {
-    return cartItems.reduce(
-      (total, item) => total + item.price * item.quantity,
-      0
-    );
+    return cartItems.reduce((total, item) => {
+      const itemPrice = item.selectedSizePrice || item.price;
+      return total + itemPrice * item.quantity;
+    }, 0);
   };
 
   return (
