@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
@@ -28,6 +28,8 @@ export default function CartScreen() {
     phone: "0123456789",
     address: "123 Đường ABC, Quận 1, TP.HCM",
   });
+  const [addresses, setAddresses] = useState<string[]>([]);
+  const [addressModalVisible, setAddressModalVisible] = useState(false);
   const [isEditingContact, setIsEditingContact] = useState(false);
   const [sizeModalVisible, setSizeModalVisible] = useState(false);
   const [selectedProductForSize, setSelectedProductForSize] =
@@ -71,6 +73,87 @@ export default function CartScreen() {
 
   const handleQuantityChange = (productId: string, newQuantity: number) => {
     updateQuantity(productId, newQuantity);
+  };
+
+  const handleToggleEdit = async () => {
+    // if currently editing, save changes to Firestore
+    if (isEditingContact) {
+      try {
+        const user = auth.currentUser;
+        if (!user) return;
+
+        // ensure addresses array keeps selected address at front
+        const addr = contactInfo.address?.trim();
+        let newAddresses = addresses.slice();
+        if (addr) {
+          newAddresses = [addr, ...newAddresses.filter((a) => a !== addr)];
+        }
+
+        await updateDoc(doc(db, "users", user.uid), {
+          name: contactInfo.name || "",
+          phone: contactInfo.phone || "",
+          address: newAddresses,
+        });
+        setAddresses(newAddresses);
+      } catch (err) {
+        console.error("Error saving user contact:", err);
+      }
+    }
+
+    setIsEditingContact((s) => !s);
+  };
+
+  // Set an address as default (move to front) and persist to Firestore
+  const handleSetDefaultAddress = async (index: number) => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const addr = addresses[index];
+      if (!addr) return;
+
+      const newAddresses = [addr, ...addresses.filter((a, i) => i !== index)];
+      await updateDoc(doc(db, "users", user.uid), { address: newAddresses });
+      setAddresses(newAddresses);
+      setContactInfo({ ...contactInfo, address: addr });
+    } catch (err) {
+      console.error("Error setting default address:", err);
+      Alert.alert("Lỗi", "Không thể đặt địa chỉ mặc định. Vui lòng thử lại.");
+    }
+  };
+
+  // Delete address at index and persist; update contactInfo if necessary
+  const handleDeleteAddress = async (index: number) => {
+    Alert.alert("Xóa địa chỉ", "Bạn có chắc muốn xóa địa chỉ này?", [
+      { text: "Hủy", style: "cancel" },
+      {
+        text: "Xóa",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const user = auth.currentUser;
+            if (!user) return;
+
+            const newAddresses = addresses.filter((_, i) => i !== index);
+            await updateDoc(doc(db, "users", user.uid), {
+              address: newAddresses,
+            });
+            setAddresses(newAddresses);
+
+            // If the deleted address was currently selected in contactInfo, update to first or empty
+            if (contactInfo.address === addresses[index]) {
+              setContactInfo({
+                ...contactInfo,
+                address: newAddresses.length > 0 ? newAddresses[0] : "",
+              });
+            }
+          } catch (err) {
+            console.error("Error deleting address:", err);
+            Alert.alert("Lỗi", "Không thể xóa địa chỉ. Vui lòng thử lại.");
+          }
+        },
+      },
+    ]);
   };
 
   const handleCheckout = async () => {
@@ -179,10 +262,16 @@ export default function CartScreen() {
         const snap = await getDoc(doc(db, "users", user.uid));
         if (snap.exists()) {
           const data: any = snap.data();
+          const userAddresses: string[] = Array.isArray(data.address)
+            ? data.address
+            : [];
+          setAddresses(userAddresses);
+
           setContactInfo({
             name: data.name || "",
             phone: data.phone || "",
-            address: "",
+            // if addresses available use first, otherwise empty string
+            address: userAddresses.length > 0 ? userAddresses[0] : "",
           });
         }
       } catch (err) {
@@ -212,9 +301,7 @@ export default function CartScreen() {
         <View style={styles.contactSection}>
           <View style={styles.contactHeader}>
             <Text style={styles.sectionTitle}>Thông tin liên lạc</Text>
-            <TouchableOpacity
-              onPress={() => setIsEditingContact(!isEditingContact)}
-            >
+            <TouchableOpacity onPress={handleToggleEdit}>
               <Text style={styles.editButton}>
                 {isEditingContact ? "Lưu" : "Chỉnh sửa"}
               </Text>
@@ -240,15 +327,25 @@ export default function CartScreen() {
                 }
                 keyboardType="phone-pad"
               />
-              <TextInput
-                style={styles.input}
-                placeholder="Địa chỉ"
-                value={contactInfo.address}
-                onChangeText={(text) =>
-                  setContactInfo({ ...contactInfo, address: text })
-                }
-                multiline
-              />
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder="Địa chỉ"
+                  value={contactInfo.address}
+                  onChangeText={(text) =>
+                    setContactInfo({ ...contactInfo, address: text })
+                  }
+                  multiline
+                />
+                <TouchableOpacity
+                  style={{ marginLeft: 8, paddingHorizontal: 8 }}
+                  onPress={() => setAddressModalVisible(true)}
+                >
+                  <Text style={{ color: "#FFC107", fontWeight: "600" }}>
+                    Đổi địa chỉ
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ) : (
             <View style={styles.contactInfo}>
@@ -394,6 +491,77 @@ export default function CartScreen() {
           setSelectedProductForSize(null);
         }}
       />
+
+      {/* Address Selection Modal */}
+      <Modal
+        visible={addressModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAddressModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Chọn địa chỉ</Text>
+            {addresses.length === 0 ? (
+              <View style={{ alignItems: "center", padding: 16 }}>
+                <Text style={{ color: "#666" }}>Không có địa chỉ nào.</Text>
+              </View>
+            ) : (
+              addresses.map((a, idx) => (
+                <View
+                  key={idx}
+                  style={[
+                    {
+                      width: "100%",
+                      paddingVertical: 8,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    },
+                  ]}
+                >
+                  <TouchableOpacity
+                    style={{ flex: 1, paddingRight: 8 }}
+                    onPress={() => {
+                      setContactInfo({ ...contactInfo, address: a });
+                      setAddressModalVisible(false);
+                    }}
+                  >
+                    <Text style={styles.addressText} numberOfLines={2}>
+                      {a}
+                    </Text>
+                  </TouchableOpacity>
+                  <View style={styles.addressActions}>
+                    <TouchableOpacity
+                      onPress={() => handleSetDefaultAddress(idx)}
+                      style={styles.actionButton}
+                    >
+                      <Text style={styles.actionButtonText}>Đặt mặc định</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => handleDeleteAddress(idx)}
+                      style={[styles.actionButton, { marginLeft: 8 }]}
+                    >
+                      <Text
+                        style={[styles.actionButtonText, { color: "#d9534f" }]}
+                      >
+                        Xóa
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))
+            )}
+
+            <TouchableOpacity
+              style={[styles.modalCancelBtn, { marginTop: 12 }]}
+              onPress={() => setAddressModalVisible(false)}
+            >
+              <Text style={styles.modalCancelBtnText}>Đóng</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Checkout Button */}
       <View style={styles.bottomBar}>
@@ -935,5 +1103,24 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#333",
     flex: 1,
+  },
+  addressText: {
+    fontSize: 15,
+    color: "#333",
+  },
+  addressActions: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  actionButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: "transparent",
+  },
+  actionButtonText: {
+    fontSize: 13,
+    color: "#333",
+    fontWeight: "600",
   },
 });

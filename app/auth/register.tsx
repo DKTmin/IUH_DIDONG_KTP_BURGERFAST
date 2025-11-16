@@ -94,6 +94,8 @@ export default function RegisterScreen() {
         role: "customer",
         points: 0, // 🌟 Điểm khởi đầu
         createdAt: new Date().toISOString(),
+        // New address field: empty array by default
+        address: [],
       });
 
       Alert.alert(t('register.alerts.successTitle'), t('register.alerts.successMessage'));
