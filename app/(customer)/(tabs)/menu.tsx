@@ -52,6 +52,7 @@ export default function MenuScreen() {
     } else {
       setSearchResults([]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
 
   const loadData = async () => {
@@ -126,35 +127,13 @@ export default function MenuScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Image
-          source={{ uri: "https://via.placeholder.com/120x40?text=LOGO" }}
-          style={styles.logo}
-        />
-        <View style={styles.headerRight}>
-          {!searchVisible ? (
-            <TouchableOpacity onPress={() => setSearchVisible(true)}>
-              <Text style={styles.searchIcon}>🔍</Text>
-            </TouchableOpacity>
-          ) : (
-            <>
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Tìm kiếm..."
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                autoFocus
-              />
-              <TouchableOpacity
-                onPress={() => {
-                  setSearchVisible(false);
-                  setSearchQuery("");
-                }}
-              >
-                <Text style={styles.closeIcon}>✕</Text>
-              </TouchableOpacity>
-            </>
-          )}
-        </View>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+        >
+          <Text style={styles.backButtonText}>←</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>MENU</Text>
       </View>
 
       {loading ? (
@@ -198,6 +177,39 @@ export default function MenuScreen() {
               </TouchableOpacity>
             ))}
           </ScrollView>
+
+          {/* Search Bar */}
+          <View style={styles.searchBar}>
+            {!searchVisible ? (
+              <TouchableOpacity
+                style={styles.searchBarContainer}
+                onPress={() => setSearchVisible(true)}
+              >
+                <Text style={styles.searchIcon}>🔍</Text>
+                <Text style={styles.searchPlaceholder}>
+                  Tìm kiếm sản phẩm...
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.searchBarActive}>
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Tìm kiếm..."
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  autoFocus
+                />
+                <TouchableOpacity
+                  onPress={() => {
+                    setSearchVisible(false);
+                    setSearchQuery("");
+                  }}
+                >
+                  <Text style={styles.closeIcon}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
 
           {/* Products List */}
           <ScrollView
@@ -421,41 +433,77 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 16,
+    paddingTop: 16,
+    paddingBottom: 16,
     backgroundColor: "#fff",
-    paddingTop: 50,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
-  logo: {
-    width: 120,
-    height: 40,
+  backButton: {
+    paddingLeft: 8,
   },
-  headerRight: {
+  backButtonText: {
+    fontSize: 24,
+    color: "#333",
+  },
+  headerTitle: {
+    textAlign: "center",
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#333",
+    flex: 1,
+  },
+  logo: {
+    width: 100,
+    height: 35,
+  },
+  searchBar: {
+    backgroundColor: "#fff",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  searchBarContainer: {
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: "#f5f5f5",
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  searchBarActive: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#FFC107",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   searchIcon: {
-    fontSize: 24,
-    marginLeft: 16,
+    fontSize: 18,
+  },
+  searchPlaceholder: {
+    fontSize: 14,
+    color: "#999",
   },
   searchInput: {
     flex: 1,
     height: 36,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 18,
-    paddingHorizontal: 16,
-    marginLeft: 8,
-    minWidth: 200,
+    fontSize: 14,
+    paddingHorizontal: 8,
+    color: "#333",
   },
   closeIcon: {
-    fontSize: 24,
-    marginLeft: 12,
+    fontSize: 20,
     color: "#666",
+    padding: 4,
   },
   categoryTabs: {
     backgroundColor: "#fff",
