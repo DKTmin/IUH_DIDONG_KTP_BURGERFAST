@@ -1,3 +1,6 @@
+import LanguageSelector from "@/app/components/LanguageSelector";
+import { auth, db } from "@/app/config/firebaseConfig"; // ⚠️ cập nhật lại đường dẫn
+import useTranslation from "@/app/hooks/useTranslation";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { signOut } from "firebase/auth";
@@ -12,9 +15,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import LanguageSelector from "@/app/components/LanguageSelector";
-import { auth, db } from "@/app/config/firebaseConfig"; // ⚠️ cập nhật lại đường dẫn
-import useTranslation from "@/app/hooks/useTranslation";
 
 export default function CustomerAccount() {
   const router = useRouter();
@@ -119,7 +119,7 @@ export default function CustomerAccount() {
 
         <TouchableOpacity
           style={styles.menuItem}
-          onPress={() => router.push("/(stack)/orders" as any)}
+          onPress={() => router.push("/(customer)/(stack)/orders" as any)}
         >
           <Ionicons name="receipt-outline" size={22} color="#333" />
           <Text style={styles.menuText}>

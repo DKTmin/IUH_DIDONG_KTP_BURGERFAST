@@ -1,4 +1,13 @@
-import { collection, doc, getDoc, getDocs } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  serverTimestamp,
+  where,
+} from "firebase/firestore";
 import { db } from "../config/firebaseConfig";
 
 export interface SizeOption {
@@ -321,5 +330,95 @@ export async function searchProducts(searchTerm: string): Promise<Product[]> {
   } catch (error) {
     console.error("Error searching products:", error);
     return [];
+  }
+}
+
+// Order Interface
+export interface OrderItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  selectedSize?: string;
+  selectedSizePrice?: number;
+  imageUrl?: string;
+}
+
+export interface Order {
+  id?: string;
+  userId: string;
+  items: OrderItem[];
+  total: number;
+  status:
+    | "pending"
+    | "confirmed"
+    | "preparing"
+    | "delivering"
+    | "delivered"
+    | "cancelled";
+  paymentMethod: "cash" | "momo";
+  contactInfo: {
+    name: string;
+    phone: string;
+    address: string;
+  };
+  createdAt: any;
+  updatedAt?: any;
+  notes?: string;
+}
+
+// Create new order
+export async function createOrder(orderData: Order): Promise<string | null> {
+  try {
+    const ordersRef = collection(db, "orders");
+    const docRef = await addDoc(ordersRef, {
+      ...orderData,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    return docRef.id;
+  } catch (error) {
+    console.error("Error creating order:", error);
+    return null;
+  }
+}
+
+// Get orders by user
+export async function getOrdersByUser(userId: string): Promise<Order[]> {
+  try {
+    const ordersRef = collection(db, "orders");
+    const q = query(ordersRef, where("userId", "==", userId));
+    const snapshot = await getDocs(q);
+
+    const orders: Order[] = [];
+    snapshot.forEach((doc) => {
+      orders.push({ id: doc.id, ...doc.data() } as Order);
+    });
+
+    return orders.sort((a, b) => {
+      const dateA = a.createdAt?.toDate?.() || new Date(0);
+      const dateB = b.createdAt?.toDate?.() || new Date(0);
+      return dateB.getTime() - dateA.getTime();
+    });
+  } catch (error) {
+    console.error("Error fetching orders:", error);
+    return [];
+  }
+}
+
+// Get single order by ID
+export async function getOrderById(orderId: string): Promise<Order | null> {
+  try {
+    const orderRef = doc(db, "orders", orderId);
+    const snapshot = await getDoc(orderRef);
+
+    if (!snapshot.exists()) {
+      return null;
+    }
+
+    return { id: snapshot.id, ...snapshot.data() } as Order;
+  } catch (error) {
+    console.error("Error fetching order:", error);
+    return null;
   }
 }

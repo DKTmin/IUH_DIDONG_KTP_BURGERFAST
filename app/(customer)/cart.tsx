@@ -16,7 +16,7 @@ import {
 } from "react-native";
 import { auth, db } from "../config/firebaseConfig";
 import { Product, useCart } from "../context/CartContext";
-import { getProducts } from "../services/firebaseService";
+import { createOrder, getProducts, Order } from "../services/firebaseService";
 
 export default function CartScreen() {
   const router = useRouter();
@@ -29,7 +29,6 @@ export default function CartScreen() {
     address: "123 Đường ABC, Quận 1, TP.HCM",
   });
   const [isEditingContact, setIsEditingContact] = useState(false);
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [sizeModalVisible, setSizeModalVisible] = useState(false);
   const [selectedProductForSize, setSelectedProductForSize] =
     useState<Product | null>(null);
@@ -37,15 +36,11 @@ export default function CartScreen() {
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "momo" | null>(
     null
   );
-
-  useEffect(() => {
-    loadProducts();
-  }, []);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const loadProducts = async () => {
     try {
       const products = await getProducts();
-      setAllProducts(products);
       // Compute suggested products once when loading
       const suggestions = products
         .filter((p) => !cartItems.find((item) => item.id === p.id))
@@ -56,6 +51,11 @@ export default function CartScreen() {
       console.error("Error loading products:", error);
     }
   };
+
+  useEffect(() => {
+    loadProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Suggested products are computed once on load and stored in state
 
@@ -73,7 +73,7 @@ export default function CartScreen() {
     updateQuantity(productId, newQuantity);
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (cartItems.length === 0) {
       Alert.alert("Giỏ hàng trống", "Vui lòng thêm sản phẩm vào giỏ hàng");
       return;
@@ -100,11 +100,70 @@ export default function CartScreen() {
         { text: "Hủy", style: "cancel" },
         {
           text: "Đặt hàng",
-          onPress: () => {
-            Alert.alert("Thành công", "Đơn hàng của bạn đã được đặt!");
-            clearCart();
-            setPaymentMethod(null);
-            router.back();
+          onPress: async () => {
+            setIsProcessing(true);
+            try {
+              const user = auth.currentUser;
+              if (!user) {
+                Alert.alert("Lỗi", "Vui lòng đăng nhập lại");
+                setIsProcessing(false);
+                return;
+              }
+
+              // Convert cart items to order items
+              const orderItems = cartItems.map((item) => ({
+                id: item.id,
+                name: item.name,
+                price: item.price,
+                quantity: item.quantity,
+                selectedSize: item.selectedSize,
+                selectedSizePrice: item.selectedSizePrice,
+                imageUrl: item.imageUrl || item.image || "",
+              }));
+
+              // Create order object
+              const orderData: Order = {
+                userId: user.uid,
+                items: orderItems,
+                total: getTotalPrice(),
+                status: "pending",
+                paymentMethod: paymentMethod,
+                contactInfo: {
+                  name: contactInfo.name,
+                  phone: contactInfo.phone,
+                  address: contactInfo.address,
+                },
+                createdAt: new Date(),
+                notes: "",
+              };
+
+              // Create order in Firestore
+              const orderId = await createOrder(orderData);
+
+              if (orderId) {
+                clearCart();
+                setPaymentMethod(null);
+                Alert.alert(
+                  "Thành công",
+                  "Đơn hàng của bạn đã được đặt! Bạn sẽ được chuyển hướng tới trang theo dõi đơn hàng.",
+                  [
+                    {
+                      text: "OK",
+                      onPress: () => {
+                        router.push("/(customer)/(stack)/orders");
+                      },
+                    },
+                  ]
+                );
+              } else {
+                Alert.alert("Lỗi", "Không thể tạo đơn hàng. Vui lòng thử lại");
+              }
+            } catch (error) {
+              console.error("Error creating order:", error);
+              Alert.alert("Lỗi", "Có lỗi khi tạo đơn hàng. Vui lòng thử lại");
+            } finally {
+              setIsProcessing(false);
+            }
           },
         },
       ]
