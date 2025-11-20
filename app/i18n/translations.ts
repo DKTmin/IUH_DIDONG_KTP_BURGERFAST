@@ -176,6 +176,10 @@ const translations = {
       needHelp: "Cần hỗ trợ?",
       contactSupport: "Liên hệ bộ phận hỗ trợ khách hàng để được giúp đỡ.",
       help: "Liên hệ hỗ trợ",
+      paymentSuccess: "Thanh toán thành công",
+      paymentSuccessMessage: "Cảm ơn bạn, đơn hàng của bạn đã được thanh toán.",
+      paymentFailed: "Thanh toán thất bại",
+      paymentFailedMessage: "Thanh toán không thành công. Vui lòng thử lại.",
       status: {
         title: "Trạng thái đơn hàng",
         pending: "Chờ xác nhận",
@@ -402,6 +406,10 @@ const translations = {
       needHelp: "Need help?",
       contactSupport: "Contact customer support for assistance.",
       help: "Contact support",
+      paymentSuccess: "Payment successful",
+      paymentSuccessMessage: "Thank you — your order has been paid.",
+      paymentFailed: "Payment failed",
+      paymentFailedMessage: "Payment was not successful. Please try again.",
       status: {
         title: "Order status",
         pending: "Pending",
@@ -621,6 +629,10 @@ const translations = {
       needHelp: "需要帮助？",
       contactSupport: "联系客户支持获取帮助。",
       help: "联系支持",
+      paymentSuccess: "支付成功",
+      paymentSuccessMessage: "感谢您 — 您的订单已完成付款。",
+      paymentFailed: "支付失败",
+      paymentFailedMessage: "支付未成功。请重试。",
       status: {
         title: "订单状态",
         pending: "待确认",

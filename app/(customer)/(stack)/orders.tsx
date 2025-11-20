@@ -16,8 +16,10 @@ import {
   View,
 } from "react-native";
 import { auth } from "../../config/firebaseConfig";
+import momoConfig from "../../config/momoConfig";
 import useTranslation from "../../hooks/useTranslation";
 import { getOrdersByUser, Order } from "../../services/firebaseService";
+import { initiateMomoPayment } from "../../services/momoService";
 
 export default function OrdersScreen() {
   const router = useRouter();
@@ -251,13 +253,13 @@ export default function OrdersScreen() {
                             backgroundColor: getStatusColor(status),
                             opacity:
                               selectedOrder.status === status ||
-                              [
-                                "pending",
-                                "confirmed",
-                                "preparing",
-                                "delivering",
-                                "delivered",
-                              ].indexOf(selectedOrder.status) >= index
+                                [
+                                  "pending",
+                                  "confirmed",
+                                  "preparing",
+                                  "delivering",
+                                  "delivered",
+                                ].indexOf(selectedOrder.status) >= index
                                 ? 1
                                 : 0.3,
                           },
@@ -432,6 +434,33 @@ export default function OrdersScreen() {
           {selectedOrder.status !== "delivered" &&
             selectedOrder.status !== "cancelled" && (
               <View style={styles.modalFooter}>
+                {/* If payment is via Momo and not paid, show a button to re-open Momo */}
+                {selectedOrder.paymentMethod === "momo" &&
+                  selectedOrder.paymentStatus !== "paid" && (
+                    <TouchableOpacity
+                      style={[styles.actionButton, { marginBottom: 8 }]}
+                      onPress={async () => {
+                        try {
+                          const appScheme = momoConfig.appScheme || "burgerappreactnative";
+                          const returnUrl = `${appScheme}://momo-return?orderId=${selectedOrder.id}`;
+                          await initiateMomoPayment({
+                            orderId: selectedOrder.id || "",
+                            amount: selectedOrder.total,
+                            recipientPhone: momoConfig.merchantPhone,
+                            note: `Thanh toán đơn ${selectedOrder.id}`,
+                            returnUrl,
+                          });
+                        } catch (e) {
+                          console.error(e);
+                          Alert.alert(t("orders.paymentFailed"), t("orders.paymentFailedMessage"));
+                        }
+                      }}
+                    >
+                      <Ionicons name="wallet" size={18} color="#fff" />
+                      <Text style={styles.actionButtonText}>{"Mở Momo để thanh toán"}</Text>
+                    </TouchableOpacity>
+                  )}
+
                 <TouchableOpacity
                   style={styles.actionButton}
                   onPress={() => {

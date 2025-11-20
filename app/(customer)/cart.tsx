@@ -172,13 +172,11 @@ export default function CartScreen() {
       return;
     }
 
+    const totalPrice = getTotalPrice();
+
     Alert.alert(
       "Xác nhận đặt hàng",
-      `Phương thức: ${
-        paymentMethod === "cash" ? "Tiền mặt" : "Momo"
-      }\nTổng tiền: ${getTotalPrice().toLocaleString(
-        "vi-VN"
-      )} đ\n\nBạn có muốn đặt hàng không?`,
+      `Phương thức: ${paymentMethod === "cash" ? "Tiền mặt" : "Momo"}\nTổng tiền: ${totalPrice.toLocaleString("vi-VN")} đ\n\nBạn có muốn đặt hàng không?`,
       [
         { text: "Hủy", style: "cancel" },
         {
@@ -208,7 +206,7 @@ export default function CartScreen() {
               const orderData: Order = {
                 userId: user.uid,
                 items: orderItems,
-                total: getTotalPrice(),
+                total: totalPrice,
                 status: "pending",
                 paymentMethod: paymentMethod,
                 contactInfo: {
@@ -224,20 +222,31 @@ export default function CartScreen() {
               const orderId = await createOrder(orderData);
 
               if (orderId) {
-                clearCart();
+                // Clear local payment method state
                 setPaymentMethod(null);
-                Alert.alert(
-                  "Thành công",
-                  "Đơn hàng của bạn đã được đặt! Bạn sẽ được chuyển hướng tới trang theo dõi đơn hàng.",
-                  [
-                    {
-                      text: "OK",
-                      onPress: () => {
-                        router.push("/(customer)/(stack)/orders");
+
+                if (paymentMethod === "momo") {
+                  // For a simpler flow: show a QR code the user can scan in MoMo.
+                  // Clear the cart now that the order is created, then navigate to QR screen.
+                  clearCart();
+
+                  // Navigate to QR screen with orderId and amount
+                  // Pass orderId and amount as query string so the QR screen can read them reliably
+                  router.push(`/momo/qr?orderId=${encodeURIComponent(orderId)}&amount=${encodeURIComponent(String(orderData.total))}` as any);
+                } else {
+                  Alert.alert(
+                    "Thành công",
+                    "Đơn hàng của bạn đã được đặt! Bạn sẽ được chuyển hướng tới trang theo dõi đơn hàng.",
+                    [
+                      {
+                        text: "OK",
+                        onPress: () => {
+                          router.push("/(customer)/(stack)/orders");
+                        },
                       },
-                    },
-                  ]
-                );
+                    ]
+                  );
+                }
               } else {
                 Alert.alert("Lỗi", "Không thể tạo đơn hàng. Vui lòng thử lại");
               }
@@ -627,7 +636,7 @@ function SuggestedProductCard({ product, onAdd }: any) {
   const displayPrice =
     product.sizes && product.sizes.length > 0
       ? product.sizes.find((s: any) => s.key === "small")?.price ||
-        product.price
+      product.price
       : product.price;
 
   return (
@@ -674,7 +683,7 @@ function SizeSelectionModal({ visible, product, onClose, onConfirm }: any) {
                 style={[
                   styles.modalSizeButton,
                   selectedSize?.key === size.key &&
-                    styles.modalSizeButtonActive,
+                  styles.modalSizeButtonActive,
                 ]}
                 onPress={() => setSelectedSize(size)}
               >
@@ -682,7 +691,7 @@ function SizeSelectionModal({ visible, product, onClose, onConfirm }: any) {
                   style={[
                     styles.modalSizeButtonText,
                     selectedSize?.key === size.key &&
-                      styles.modalSizeButtonTextActive,
+                    styles.modalSizeButtonTextActive,
                   ]}
                 >
                   {size.name} - {size.price.toLocaleString("vi-VN")} đ
