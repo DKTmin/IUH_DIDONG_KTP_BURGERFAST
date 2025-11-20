@@ -1,80 +1,62 @@
-import { Linking } from "react-native";
-import momoConfig from "../config/momoConfig";
 import { updateOrder } from "./firebaseService";
 
-// Simple Momo deeplink builder and opener. This is a first-pass integration using deep links.
-// NOTE: Momo's exact URL scheme may vary; you should confirm Momo's developer docs for production.
+// Mock Momo payment service for educational purposes
+// This simulates a payment transaction without actual payment processing
 
 export interface MomoPaymentOptions {
-    orderId: string;
-    amount: number; // integer VND
-    recipientPhone?: string; // merchant phone or momo account
-    note?: string;
-    returnUrl?: string; // deep link back to the app
+  orderId: string;
+  amount: number; // integer VND
+  recipientPhone?: string; // merchant phone or momo account
+  note?: string;
+  returnUrl?: string; // deep link back to the app
 }
 
+// Mock transaction ID generator
+function generateMockTransactionId(): string {
+  const timestamp = Date.now().toString();
+  const random = Math.random().toString(36).substring(2, 11);
+  return `MOCK_${timestamp}_${random}`;
+}
+
+/**
+ * Initiates a mock Momo payment transaction for educational purposes
+ * This function simulates the payment flow without actual payment processing
+ */
 export async function initiateMomoPayment(opts: MomoPaymentOptions) {
-    const { orderId, amount, recipientPhone = "", note = "", returnUrl } = opts;
+  const { orderId, amount, recipientPhone = "" } = opts;
 
-    // Construct a basic momo deeplink. This format is commonly used but ensure with Momo docs.
-    // Example custom scheme: momo://pay?amount=10000&extra=note
-    // We'll include a returnUrl so Momo can send the user back to the app after payment.
+  try {
+    // Record payment attempt
+    await updateOrder(orderId, {
+      paymentAttempt: {
+        provider: "momo",
+        amount,
+        startedAt: new Date().toISOString(),
+      },
+      paymentStatus: "pending",
+    });
 
-    const params = new URLSearchParams();
-    params.append("amount", String(Math.round(amount)));
-    // Add multiple possible parameter names to maximize chance of prefill
-    const phoneToUse = recipientPhone || momoConfig.merchantPhone || "";
-    if (phoneToUse) {
-        params.append("partner", phoneToUse);
-        params.append("merchant", phoneToUse);
-        params.append("phone", phoneToUse);
-        params.append("receiver", phoneToUse);
-    }
-    if (note) params.append("note", note);
-    if (returnUrl) params.append("returnUrl", returnUrl);
-    params.append("orderId", orderId);
+    // Store mock transaction metadata for later use
+    const mockTransaction = {
+      id: generateMockTransactionId(),
+      orderId,
+      amount,
+      recipientPhone: recipientPhone || "0399026084",
+      timestamp: new Date().toISOString(),
+      status: "pending",
+    };
 
-    // Several Momo deeplink formats exist; try a standard scheme first
-    const deeplink = `momo://pay?${params.toString()}`;
-    const deeplinkAlt = `momo://payment?${params.toString()}`;
-
-    try {
-        // Store payment attempt metadata on the order (optional but useful)
-        await updateOrder(orderId, {
-            paymentAttempt: {
-                provider: "momo",
-                amount,
-                startedAt: new Date().toISOString(),
-            },
-            paymentStatus: "pending",
-        });
-    } catch (e) {
-        console.warn("Could not write paymentAttempt to order:", e);
-    }
-
-    // Try to open Momo app via deeplink
-    try {
-        // Try primary deeplink
-        const supported = await Linking.canOpenURL(deeplink);
-        if (supported) {
-            await Linking.openURL(deeplink);
-            return;
-        }
-
-        // Try alternate deeplink
-        const supportedAlt = await Linking.canOpenURL(deeplinkAlt);
-        if (supportedAlt) {
-            await Linking.openURL(deeplinkAlt);
-            return;
-        }
-
-        // Fallback: attempt web checkout or show instructions to user
-        const webFallback = `https://momo.vn/`;
-        await Linking.openURL(webFallback);
-    } catch (error) {
-        console.error("Error opening Momo deeplink:", error);
-        // fallback
-        const webFallback = `https://momo.vn/`;
-        Linking.openURL(webFallback).catch((e) => console.error(e));
-    }
+    // In a real app, this would be returned to indicate payment is ready
+    return {
+      success: true,
+      transactionId: mockTransaction.id,
+      message: "Mock payment transaction initiated",
+    };
+  } catch (error) {
+    console.error("Error initiating mock payment:", error);
+    return {
+      success: false,
+      error: "Failed to initiate payment",
+    };
+  }
 }

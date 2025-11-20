@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Image,
@@ -16,7 +16,9 @@ import {
 } from "react-native";
 import { auth, db } from "../config/firebaseConfig";
 import { Product, useCart } from "../context/CartContext";
+import { getAddressSuggestions } from "../data/addressSuggestions";
 import { createOrder, getProducts, Order } from "../services/firebaseService";
+import { fetchPlaceSuggestions } from "../services/placeService";
 
 export default function CartScreen() {
   const router = useRouter();
@@ -39,6 +41,11 @@ export default function CartScreen() {
     null
   );
   const [isProcessing, setIsProcessing] = useState(false);
+  const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
+  const [showAddressSuggestions, setShowAddressSuggestions] = useState(false);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] =
+    useState<number>(-1);
+  const addressQueryTimeout = useRef<number | null>(null);
 
   const loadProducts = async () => {
     try {
@@ -73,6 +80,87 @@ export default function CartScreen() {
 
   const handleQuantityChange = (productId: string, newQuantity: number) => {
     updateQuantity(productId, newQuantity);
+  };
+
+  // Handle address input change and show suggestions (debounced remote lookup)
+  const handleAddressChange = (text: string) => {
+    setContactInfo({ ...contactInfo, address: text });
+
+    // clear pending timeout
+    if (addressQueryTimeout.current) {
+      clearTimeout(addressQueryTimeout.current as any);
+      addressQueryTimeout.current = null;
+    }
+
+    const trimmed = text.trim();
+    if (trimmed.length === 0) {
+      setAddressSuggestions([]);
+      setShowAddressSuggestions(false);
+      return;
+    }
+
+    // If user typed only 1-2 chars, use local suggestions to avoid API calls
+    if (trimmed.length <= 2) {
+      const suggestions = getAddressSuggestions(trimmed).map((s) => ({
+        display_name: s,
+        parts: s
+          .split(",")
+          .map((p) => p.trim())
+          .slice(0, 3),
+      }));
+      setAddressSuggestions(suggestions);
+      setShowAddressSuggestions(suggestions.length > 0);
+      setSelectedSuggestionIndex(suggestions.length > 0 ? 0 : -1);
+      return;
+    }
+
+    // Debounce remote request (400ms)
+    addressQueryTimeout.current = setTimeout(async () => {
+      try {
+        const remote = await fetchPlaceSuggestions(trimmed);
+        if (remote && remote.length > 0) {
+          setAddressSuggestions(remote);
+          setShowAddressSuggestions(true);
+          setSelectedSuggestionIndex(0);
+        } else {
+          // fallback to local dataset
+          const fallback = getAddressSuggestions(trimmed).map((s) => ({
+            display_name: s,
+            parts: s
+              .split(",")
+              .map((p) => p.trim())
+              .slice(0, 3),
+          }));
+          setAddressSuggestions(fallback);
+          setShowAddressSuggestions(fallback.length > 0);
+          setSelectedSuggestionIndex(fallback.length > 0 ? 0 : -1);
+        }
+      } catch (err) {
+        console.warn("Address suggestion error:", err);
+        const fallback = getAddressSuggestions(trimmed).map((s) => ({
+          display_name: s,
+          parts: s
+            .split(",")
+            .map((p) => p.trim())
+            .slice(0, 3),
+        }));
+        setAddressSuggestions(fallback);
+        setShowAddressSuggestions(fallback.length > 0);
+        setSelectedSuggestionIndex(fallback.length > 0 ? 0 : -1);
+      }
+    }, 400) as unknown as number;
+  };
+
+  // Handle selecting an address from suggestions
+  const handleSelectAddressSuggestion = (suggestion: any) => {
+    const addressStr =
+      typeof suggestion === "string"
+        ? suggestion
+        : suggestion?.display_name || String(suggestion);
+    setContactInfo({ ...contactInfo, address: addressStr });
+    setShowAddressSuggestions(false);
+    setAddressSuggestions([]);
+    setSelectedSuggestionIndex(-1);
   };
 
   const handleToggleEdit = async () => {
@@ -176,7 +264,11 @@ export default function CartScreen() {
 
     Alert.alert(
       "Xác nhận đặt hàng",
-      `Phương thức: ${paymentMethod === "cash" ? "Tiền mặt" : "Momo"}\nTổng tiền: ${totalPrice.toLocaleString("vi-VN")} đ\n\nBạn có muốn đặt hàng không?`,
+      `Phương thức: ${
+        paymentMethod === "cash" ? "Tiền mặt" : "Momo"
+      }\nTổng tiền: ${totalPrice.toLocaleString(
+        "vi-VN"
+      )} đ\n\nBạn có muốn đặt hàng không?`,
       [
         { text: "Hủy", style: "cancel" },
         {
@@ -226,14 +318,19 @@ export default function CartScreen() {
                 setPaymentMethod(null);
 
                 if (paymentMethod === "momo") {
-                  // For a simpler flow: show a QR code the user can scan in MoMo.
-                  // Clear the cart now that the order is created, then navigate to QR screen.
+                  // Clear the cart now that the order is created
                   clearCart();
 
-                  // Navigate to QR screen with orderId and amount
-                  // Pass orderId and amount as query string so the QR screen can read them reliably
-                  router.push(`/momo/qr?orderId=${encodeURIComponent(orderId)}&amount=${encodeURIComponent(String(orderData.total))}` as any);
+                  // Navigate to mock payment screen with orderId and amount
+                  router.push({
+                    pathname: "/momo/qr",
+                    params: {
+                      orderId: orderId,
+                      amount: String(totalPrice),
+                    },
+                  } as any);
                 } else {
+                  // For cash payment, mark order as confirmed immediately
                   Alert.alert(
                     "Thành công",
                     "Đơn hàng của bạn đã được đặt! Bạn sẽ được chuyển hướng tới trang theo dõi đơn hàng.",
@@ -241,7 +338,8 @@ export default function CartScreen() {
                       {
                         text: "OK",
                         onPress: () => {
-                          router.push("/(customer)/(stack)/orders");
+                          clearCart();
+                          router.replace("/(customer)/(stack)/orders");
                         },
                       },
                     ]
@@ -337,15 +435,144 @@ export default function CartScreen() {
                 keyboardType="phone-pad"
               />
               <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <TextInput
-                  style={[styles.input, { flex: 1 }]}
-                  placeholder="Địa chỉ"
-                  value={contactInfo.address}
-                  onChangeText={(text) =>
-                    setContactInfo({ ...contactInfo, address: text })
-                  }
-                  multiline
-                />
+                <View style={{ flex: 1 }}>
+                  <TextInput
+                    style={[styles.input, { flex: 1 }]}
+                    placeholder="Địa chỉ"
+                    value={contactInfo.address}
+                    onChangeText={handleAddressChange}
+                    onKeyPress={(e: any) => {
+                      const key = e?.nativeEvent?.key;
+                      if (!key) return;
+                      if (
+                        !addressSuggestions ||
+                        addressSuggestions.length === 0
+                      )
+                        return;
+                      if (key === "ArrowDown") {
+                        setSelectedSuggestionIndex((s) =>
+                          Math.min(
+                            addressSuggestions.length - 1,
+                            Math.max(0, s + 1)
+                          )
+                        );
+                      } else if (key === "ArrowUp") {
+                        setSelectedSuggestionIndex((s) =>
+                          Math.max(0, s === -1 ? 0 : s - 1)
+                        );
+                      }
+                    }}
+                    onSubmitEditing={() => {
+                      if (addressSuggestions && addressSuggestions.length > 0) {
+                        const idx =
+                          selectedSuggestionIndex >= 0
+                            ? selectedSuggestionIndex
+                            : 0;
+                        handleSelectAddressSuggestion(addressSuggestions[idx]);
+                      }
+                    }}
+                    multiline
+                  />
+                  {/* Address Suggestions Dropdown */}
+                  {showAddressSuggestions && addressSuggestions.length > 0 && (
+                    <View
+                      style={styles.suggestionsDropdown}
+                      pointerEvents="box-none"
+                    >
+                      <ScrollView
+                        style={{ maxHeight: 208 }}
+                        contentContainerStyle={{ paddingVertical: 4 }}
+                        nestedScrollEnabled
+                        keyboardShouldPersistTaps="handled"
+                      >
+                        {addressSuggestions.map(
+                          (suggestion: any, index: number) => {
+                            const isActive = index === selectedSuggestionIndex;
+                            const display =
+                              typeof suggestion === "string"
+                                ? suggestion
+                                : suggestion.display_name || String(suggestion);
+                            const parts =
+                              typeof suggestion === "string"
+                                ? suggestion
+                                    .split(",")
+                                    .map((p) => p.trim())
+                                    .slice(0, 3)
+                                : suggestion.parts || [display];
+
+                            const primary = parts[0] || display;
+                            const secondary = parts.slice(1).join(", ");
+
+                            const query = (contactInfo.address || "").trim();
+
+                            const renderHighlighted = (
+                              text: string,
+                              q: string
+                            ) => {
+                              if (!q)
+                                return (
+                                  <Text style={styles.suggestionLinePrimary}>
+                                    {text}
+                                  </Text>
+                                );
+                              const lower = text.toLowerCase();
+                              const qi = q.toLowerCase();
+                              const idx = lower.indexOf(qi);
+                              if (idx === -1)
+                                return (
+                                  <Text style={styles.suggestionLinePrimary}>
+                                    {text}
+                                  </Text>
+                                );
+                              return (
+                                <Text style={styles.suggestionLinePrimary}>
+                                  {text.slice(0, idx)}
+                                  <Text style={styles.highlight}>
+                                    {text.slice(idx, idx + q.length)}
+                                  </Text>
+                                  {text.slice(idx + q.length)}
+                                </Text>
+                              );
+                            };
+
+                            return (
+                              <TouchableOpacity
+                                key={index}
+                                style={[
+                                  styles.suggestionItem,
+                                  isActive && styles.suggestionItemActive,
+                                ]}
+                                onPress={() =>
+                                  handleSelectAddressSuggestion(suggestion)
+                                }
+                                onPressIn={() =>
+                                  setSelectedSuggestionIndex(index)
+                                }
+                              >
+                                <Ionicons
+                                  name="location-outline"
+                                  size={16}
+                                  color="#f5c518"
+                                />
+                                <View style={{ flex: 1, marginLeft: 8 }}>
+                                  {renderHighlighted(primary, query)}
+                                  {secondary ? (
+                                    <Text
+                                      style={styles.suggestionLineSecondary}
+                                      numberOfLines={1}
+                                    >
+                                      {secondary}
+                                    </Text>
+                                  ) : null}
+                                </View>
+                              </TouchableOpacity>
+                            );
+                          }
+                        )}
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
                 <TouchableOpacity
                   style={{ marginLeft: 8, paddingHorizontal: 8 }}
                   onPress={() => setAddressModalVisible(true)}
@@ -478,7 +705,7 @@ export default function CartScreen() {
               )}
             </View>
             <Text style={styles.paymentOptionText}>
-              Thanh toán bằng ví điện tử Momo
+              Thanh toán bằng ví điện tử Momo (mô phỏng)
             </Text>
           </TouchableOpacity>
         </View>
@@ -573,12 +800,101 @@ export default function CartScreen() {
       </Modal>
 
       {/* Checkout Button */}
+      <SizeSelectionModal
+        visible={sizeModalVisible}
+        product={selectedProductForSize}
+        onClose={() => {
+          setSizeModalVisible(false);
+          setSelectedProductForSize(null);
+        }}
+        onConfirm={(product: Product, size: any) => {
+          addToCart(product, 1, size.name, size.price);
+          setSizeModalVisible(false);
+          setSelectedProductForSize(null);
+        }}
+      />
+
+      {/* Address Selection Modal */}
+      <Modal
+        visible={addressModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAddressModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Chọn địa chỉ</Text>
+            {addresses.length === 0 ? (
+              <View style={{ alignItems: "center", padding: 16 }}>
+                <Text style={{ color: "#666" }}>Không có địa chỉ nào.</Text>
+              </View>
+            ) : (
+              addresses.map((a, idx) => (
+                <View
+                  key={idx}
+                  style={[
+                    {
+                      width: "100%",
+                      paddingVertical: 8,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    },
+                  ]}
+                >
+                  <TouchableOpacity
+                    style={{ flex: 1, paddingRight: 8 }}
+                    onPress={() => {
+                      setContactInfo({ ...contactInfo, address: a });
+                      setAddressModalVisible(false);
+                    }}
+                  >
+                    <Text style={styles.addressText} numberOfLines={2}>
+                      {a}
+                    </Text>
+                  </TouchableOpacity>
+                  <View style={styles.addressActions}>
+                    <TouchableOpacity
+                      onPress={() => handleSetDefaultAddress(idx)}
+                      style={styles.actionButton}
+                    >
+                      <Text style={styles.actionButtonText}>Đặt mặc định</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => handleDeleteAddress(idx)}
+                      style={[styles.actionButton, { marginLeft: 8 }]}
+                    >
+                      <Text
+                        style={[styles.actionButtonText, { color: "#d9534f" }]}
+                      >
+                        Xóa
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))
+            )}
+
+            <TouchableOpacity
+              style={[styles.modalCancelBtn, { marginTop: 12 }]}
+              onPress={() => setAddressModalVisible(false)}
+            >
+              <Text style={styles.modalCancelBtnText}>Đóng</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Checkout Button */}
       <View style={styles.bottomBar}>
         <TouchableOpacity
-          style={styles.checkoutButton}
+          style={[styles.checkoutButton, isProcessing && { opacity: 0.6 }]}
           onPress={handleCheckout}
+          disabled={isProcessing}
         >
-          <Text style={styles.checkoutButtonText}>Thanh toán</Text>
+          <Text style={styles.checkoutButtonText}>
+            {isProcessing ? "Đang xử lý..." : "Thanh toán"}
+          </Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -636,7 +952,7 @@ function SuggestedProductCard({ product, onAdd }: any) {
   const displayPrice =
     product.sizes && product.sizes.length > 0
       ? product.sizes.find((s: any) => s.key === "small")?.price ||
-      product.price
+        product.price
       : product.price;
 
   return (
@@ -683,7 +999,7 @@ function SizeSelectionModal({ visible, product, onClose, onConfirm }: any) {
                 style={[
                   styles.modalSizeButton,
                   selectedSize?.key === size.key &&
-                  styles.modalSizeButtonActive,
+                    styles.modalSizeButtonActive,
                 ]}
                 onPress={() => setSelectedSize(size)}
               >
@@ -691,7 +1007,7 @@ function SizeSelectionModal({ visible, product, onClose, onConfirm }: any) {
                   style={[
                     styles.modalSizeButtonText,
                     selectedSize?.key === size.key &&
-                    styles.modalSizeButtonTextActive,
+                      styles.modalSizeButtonTextActive,
                   ]}
                 >
                   {size.name} - {size.price.toLocaleString("vi-VN")} đ
@@ -790,6 +1106,55 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     fontSize: 14,
+  },
+  suggestionsDropdown: {
+    position: "absolute",
+    top: "100%",
+    left: 0,
+    right: 0,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    marginTop: 4,
+    maxHeight: 200,
+    zIndex: 1000,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  suggestionItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+    gap: 8,
+  },
+  suggestionText: {
+    fontSize: 13,
+    color: "#333",
+    flex: 1,
+  },
+  suggestionLinePrimary: {
+    fontSize: 13,
+    color: "#333",
+    fontWeight: "600",
+  },
+  suggestionLineSecondary: {
+    fontSize: 12,
+    color: "#666",
+    marginTop: 2,
+  },
+  suggestionItemActive: {
+    backgroundColor: "#fff7e6",
+  },
+  highlight: {
+    backgroundColor: "#FFF3CD",
+    color: "#b36b00",
   },
   contactInfo: {
     gap: 8,

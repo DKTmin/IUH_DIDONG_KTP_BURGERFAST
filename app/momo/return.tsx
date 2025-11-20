@@ -1,86 +1,164 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import useTranslation from "../hooks/useTranslation";
-import { markOrderPaid } from "../services/firebaseService";
 
 export default function MomoReturn() {
-    const params = useLocalSearchParams();
-    const router = useRouter();
-    const { t } = useTranslation();
-    const [status, setStatus] = useState<"pending" | "success" | "failed">("pending");
+  const params = useLocalSearchParams();
+  const router = useRouter();
+  const { t } = useTranslation();
+  const [status, setStatus] = useState<"pending" | "success" | "failed">(
+    "pending"
+  );
 
-    useEffect(() => {
-        // Expo Router parses query params from incoming deep links like: burgerfast://momo-return?orderId=xxx&status=success&tx=123
-        const orderId = params.orderId as string | undefined;
-        const paymentStatus = (params.status as string) || "failed";
-        const tx = params.tx as string | undefined;
+  useEffect(() => {
+    // Determine payment status from params
+    const paymentStatus = (params.status as string) || "success";
 
-        async function handle() {
-            if (!orderId) {
-                setStatus("failed");
-                return;
-            }
+    // Simulate processing delay
+    const timer = setTimeout(() => {
+      if (paymentStatus === "success") {
+        setStatus("success");
+      } else {
+        setStatus("failed");
+      }
+    }, 1500);
 
-            if (paymentStatus === "success") {
-                // mark order paid
-                await markOrderPaid(orderId, tx);
-                setStatus("success");
-            } else {
-                // update order paymentStatus to failed
-                try {
-                    await markOrderPaid(orderId, tx);
-                } catch (e) {
-                    console.warn(e);
-                }
-                setStatus("failed");
-            }
-        }
+    return () => clearTimeout(timer);
+  }, [params]);
 
-        handle();
-    }, [params]);
-
-    return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.content}>
-                {status === "pending" && (
-                    <>
-                        <ActivityIndicator size="large" color="#f5c518" />
-                        <Text style={styles.text}>{t("orders.loading")}</Text>
-                    </>
-                )}
-                {status === "success" && (
-                    <>
-                        <Text style={styles.successTitle}>{t("orders.paymentSuccess")}</Text>
-                        <Text style={styles.text}>{t("orders.paymentSuccessMessage")}</Text>
-                        <TouchableOpacity
-                            style={styles.button}
-                            onPress={() => router.replace("/")}
-                        >
-                            <Text style={styles.buttonText}>{t("orders.continueShopping")}</Text>
-                        </TouchableOpacity>
-                    </>
-                )}
-                {status === "failed" && (
-                    <>
-                        <Text style={styles.failTitle}>{t("orders.paymentFailed")}</Text>
-                        <Text style={styles.text}>{t("orders.paymentFailedMessage")}</Text>
-                        <TouchableOpacity style={styles.button} onPress={() => router.back()}>
-                            <Text style={styles.buttonText}>{t("common.ok")}</Text>
-                        </TouchableOpacity>
-                    </>
-                )}
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.content}>
+        {status === "pending" && (
+          <>
+            <ActivityIndicator size="large" color="#f5c518" />
+            <Text style={styles.text}>Đang xử lý thanh toán...</Text>
+          </>
+        )}
+        {status === "success" && (
+          <>
+            <View style={styles.successIcon}>
+              <Text style={styles.successIconText}>✓</Text>
             </View>
-        </SafeAreaView>
-    );
+            <Text style={styles.successTitle}>Thanh toán thành công!</Text>
+            <Text style={styles.text}>
+              Đơn hàng của bạn đã được tạo. Bạn sẽ được chuyển hướng tới trang
+              theo dõi đơn hàng.
+            </Text>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => router.replace("/(customer)/(stack)/orders")}
+            >
+              <Text style={styles.buttonText}>Xem đơn hàng của tôi</Text>
+            </TouchableOpacity>
+          </>
+        )}
+        {status === "failed" && (
+          <>
+            <View style={styles.failIcon}>
+              <Text style={styles.failIconText}>✕</Text>
+            </View>
+            <Text style={styles.failTitle}>Thanh toán thất bại</Text>
+            <Text style={styles.text}>
+              Có lỗi xảy ra trong quá trình thanh toán. Vui lòng thử lại.
+            </Text>
+            <TouchableOpacity
+              style={[styles.button, styles.retryButton]}
+              onPress={() => router.back()}
+            >
+              <Text style={styles.buttonText}>Quay lại</Text>
+            </TouchableOpacity>
+          </>
+        )}
+      </View>
+    </SafeAreaView>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#fff" },
-    content: { flex: 1, alignItems: "center", justifyContent: "center", padding: 20 },
-    text: { marginTop: 12, fontSize: 14, color: "#444", textAlign: "center" },
-    successTitle: { fontSize: 20, fontWeight: "700", color: "#4CAF50" },
-    failTitle: { fontSize: 20, fontWeight: "700", color: "#F44336" },
-    button: { marginTop: 20, backgroundColor: "#f5c518", paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
-    buttonText: { color: "#fff", fontWeight: "700" },
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  content: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+  },
+  text: {
+    marginTop: 16,
+    fontSize: 15,
+    color: "#666",
+    textAlign: "center",
+    lineHeight: 22,
+  },
+  successIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#4CAF50",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  successIconText: {
+    fontSize: 40,
+    color: "#fff",
+    fontWeight: "700",
+  },
+  successTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#4CAF50",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  failIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#F44336",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  failIconText: {
+    fontSize: 40,
+    color: "#fff",
+    fontWeight: "700",
+  },
+  failTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#F44336",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  button: {
+    marginTop: 24,
+    backgroundColor: "#f5c518",
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 12,
+    minWidth: 200,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  retryButton: {
+    backgroundColor: "#f5c518",
+  },
+  buttonText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 16,
+  },
 });
