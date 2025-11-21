@@ -9,6 +9,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import useTranslation from "../../hooks/useTranslation";
 
 const STORES_DATA = [
   {
@@ -56,6 +57,7 @@ const STORES_DATA = [
 export default function StoresScreen() {
   const router = useRouter();
   const [stores] = useState(STORES_DATA);
+  const { t } = useTranslation();
 
 
 
@@ -97,7 +99,7 @@ export default function StoresScreen() {
         >
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Cửa hàng của chúng tôi</Text>
+        <Text style={styles.headerTitle}>{t("stores.title")}</Text>
         <View style={styles.headerRight} />
       </View>
 

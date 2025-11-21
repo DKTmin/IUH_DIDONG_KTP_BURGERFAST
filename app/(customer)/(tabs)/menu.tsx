@@ -18,11 +18,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import useTranslation from "../../hooks/useTranslation";
 
 export default function MenuScreen() {
   const router = useRouter();
   const { categoryId } = useLocalSearchParams() as { categoryId?: string };
   const { addToCart } = useCart();
+  const { t } = useTranslation();
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("trending");
@@ -145,13 +147,13 @@ export default function MenuScreen() {
         >
           <Text style={styles.backButtonText}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>MENU</Text>
+        <Text style={styles.headerTitle}>{t("menu.title")}</Text>
       </View>
 
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#e63946" />
-          <Text style={styles.loadingText}>Đang tải dữ liệu...</Text>
+          <Text style={styles.loadingText}>{t("menu.loadingData")}</Text>
         </View>
       ) : (
         <>
@@ -199,14 +201,14 @@ export default function MenuScreen() {
               >
                 <Text style={styles.searchIcon}>🔍</Text>
                 <Text style={styles.searchPlaceholder}>
-                  Tìm kiếm sản phẩm...
+                  {t("menu.searchPlaceholder")}
                 </Text>
               </TouchableOpacity>
             ) : (
               <View style={styles.searchBarActive}>
                 <TextInput
                   style={styles.searchInput}
-                  placeholder="Tìm kiếm..."
+                  placeholder={t("menu.searchActive")}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
                   autoFocus
@@ -257,11 +259,11 @@ export default function MenuScreen() {
             {searchQuery ? (
               <View style={styles.categorySection}>
                 <Text style={styles.categoryTitle}>
-                  {searching ? "Đang tìm kiếm..." : "KẾT QUẢ TÌM KIẾM"}
+                  {searching ? t("menu.searching") : t("menu.searchResults")}
                 </Text>
                 {filteredProducts.length === 0 ? (
                   <Text style={styles.noResultsText}>
-                    Không tìm thấy sản phẩm
+                    {t("menu.noResults")}
                   </Text>
                 ) : (
                   filteredProducts.map((product) => (
@@ -324,13 +326,14 @@ export default function MenuScreen() {
         ) => {
           addToCart(product, qty, sizeName, sizePrice);
         }}
+        t={t}
       />
     </View>
   );
 }
 
 // Size Selection Modal Component
-function SizeSelectionModal({ visible, product, onClose, onConfirm }: any) {
+function SizeSelectionModal({ visible, product, onClose, onConfirm, t }: any) {
   const [selectedSize, setSelectedSize] = useState<any>(null);
 
   const handleConfirm = () => {
@@ -350,7 +353,7 @@ function SizeSelectionModal({ visible, product, onClose, onConfirm }: any) {
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Chọn size cho {product?.name}</Text>
+          <Text style={styles.modalTitle}>{t("menu.sizeModal.title").replace("{productName}", product?.name || "")}</Text>
 
           <View style={styles.modalSizeOptions}>
             {product?.sizes?.map((size: any) => (
@@ -378,7 +381,7 @@ function SizeSelectionModal({ visible, product, onClose, onConfirm }: any) {
 
           <View style={styles.modalButtons}>
             <TouchableOpacity style={styles.modalCancelBtn} onPress={onClose}>
-              <Text style={styles.modalCancelBtnText}>Hủy</Text>
+              <Text style={styles.modalCancelBtnText}>{t("menu.sizeModal.cancel")}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
@@ -388,7 +391,7 @@ function SizeSelectionModal({ visible, product, onClose, onConfirm }: any) {
               onPress={handleConfirm}
               disabled={!selectedSize}
             >
-              <Text style={styles.modalConfirmBtnText}>Thêm vào giỏ</Text>
+              <Text style={styles.modalConfirmBtnText}>{t("menu.sizeModal.addToCart")}</Text>
             </TouchableOpacity>
           </View>
         </View>

@@ -12,11 +12,13 @@ import {
   View,
 } from "react-native";
 import momoConfig from "../config/momoConfig";
+import useTranslation from "../hooks/useTranslation";
 import { updateOrder } from "../services/firebaseService";
 
 export default function MomoQrScreen({ route }: any) {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { t } = useTranslation();
 
   let orderId: string | undefined;
   let amount: any;
@@ -71,20 +73,21 @@ export default function MomoQrScreen({ route }: any) {
    */
   const handleSimulatePayment = async () => {
     if (!orderId) {
-      Alert.alert("Lỗi", "ID đơn hàng không hợp lệ");
+      Alert.alert(
+        t("momo.alertError"),
+        t("momo.alertInvalidOrder")
+      );
       return;
     }
 
     // Show loading
     Alert.alert(
-      "Xác nhận thanh toán",
-      `Bạn đang mô phỏng thanh toán ${parsedAmount?.toLocaleString(
-        "vi-VN"
-      )} đ qua Momo\n\nBấm Xác nhận để hoàn thành giao dịch mô phỏng.`,
+      t("momo.alertConfirmTitle"),
+      t("momo.alertConfirmMessage").replace("{amount}", parsedAmount?.toLocaleString("vi-VN") || "0"),
       [
-        { text: "Hủy", style: "cancel" },
+        { text: t("momo.alertCancel"), style: "cancel" },
         {
-          text: "Xác nhận",
+          text: t("momo.alertConfirm"),
           onPress: async () => {
             try {
               // Mark order as paid with mock transaction ID
@@ -103,8 +106,8 @@ export default function MomoQrScreen({ route }: any) {
             } catch (error) {
               console.error("Error confirming payment:", error);
               Alert.alert(
-                "Lỗi",
-                "Không thể xác nhận thanh toán. Vui lòng thử lại."
+                t("momo.alertErrorTitle"),
+                t("momo.alertErrorMessage")
               );
             }
           },
@@ -116,9 +119,9 @@ export default function MomoQrScreen({ route }: any) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Mã QR thanh toán MoMo</Text>
+        <Text style={styles.title}>{t("momo.title")}</Text>
         <Text style={styles.subtitle}>
-          Quét mã bằng ứng dụng MoMo để thanh toán
+          {t("momo.subtitle")}
         </Text>
       </View>
 
@@ -138,7 +141,7 @@ export default function MomoQrScreen({ route }: any) {
                 { alignItems: "center", justifyContent: "center" },
               ]}
             >
-              <Text>Đang tải hình QR…</Text>
+              <Text>{t("momo.loadingQR")}</Text>
             </View>
           )}
         </View>
@@ -146,14 +149,14 @@ export default function MomoQrScreen({ route }: any) {
         {/* Payment Information Section */}
         <View style={styles.infoCard}>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Tài khoản người nhận:</Text>
+            <Text style={styles.infoLabel}>{t("momo.recipientAccount")}</Text>
             <Text style={styles.infoValue}>{momoConfig.merchantPhone}</Text>
           </View>
 
           <View style={styles.infoDivider} />
 
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Số tiền:</Text>
+            <Text style={styles.infoLabel}>{t("momo.amount")}</Text>
             <Text style={styles.infoAmount}>
               {parsedAmount?.toLocaleString("vi-VN")} đ
             </Text>
@@ -162,7 +165,7 @@ export default function MomoQrScreen({ route }: any) {
           <View style={styles.infoDivider} />
 
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Mã đơn hàng:</Text>
+            <Text style={styles.infoLabel}>{t("momo.orderId")}</Text>
             <Text style={[styles.infoValue, { fontFamily: "monospace" }]}>
               {orderId}
             </Text>
@@ -171,25 +174,24 @@ export default function MomoQrScreen({ route }: any) {
           <View style={styles.infoDivider} />
 
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Ghi chú:</Text>
-            <Text style={styles.infoValue}>Thanh toán đơn hàng</Text>
+            <Text style={styles.infoLabel}>{t("momo.notes")}</Text>
+            <Text style={styles.infoValue}>{t("momo.paymentNote")}</Text>
           </View>
         </View>
 
         {/* Instructions */}
         <View style={styles.instructionCard}>
           <Text style={styles.instructionTitle}>
-            Hướng dẫn thanh toán mô phỏng:
+            {t("momo.instructionTitle")}
           </Text>
           <Text style={styles.instructionText}>
-            1. Bấm nút "Hoàn thành thanh toán" phía dưới{"\n"}
-            2. Xác nhận thông tin thanh toán{"\n"}
-            3. Hệ thống sẽ cập nhật trạng thái đơn hàng
+            {t("momo.instruction1")}{"\n"}
+            {t("momo.instruction2")}{"\n"}
+            {t("momo.instruction3")}
           </Text>
           <View style={styles.noteBox}>
             <Text style={styles.noteText}>
-              ℹ️ Đây là giao dịch mô phỏng cho mục đích giáo dục. Không có thanh
-              toán thực tế.
+              {t("momo.simulationNote")}
             </Text>
           </View>
         </View>
@@ -202,7 +204,7 @@ export default function MomoQrScreen({ route }: any) {
           onPress={handleSimulatePayment}
         >
           <Text style={styles.completeButtonText}>
-            Hoàn thành thanh toán mô phỏng
+            {t("momo.completeButton")}
           </Text>
         </TouchableOpacity>
 
@@ -210,7 +212,7 @@ export default function MomoQrScreen({ route }: any) {
           style={styles.cancelButton}
           onPress={() => router.back()}
         >
-          <Text style={styles.cancelButtonText}>Quay lại</Text>
+          <Text style={styles.cancelButtonText}>{t("momo.backButton")}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
