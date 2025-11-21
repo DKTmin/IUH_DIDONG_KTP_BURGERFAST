@@ -17,6 +17,7 @@ import {
 import { auth, db } from "../config/firebaseConfig";
 import { Product, useCart } from "../context/CartContext";
 import { getAddressSuggestions } from "../data/addressSuggestions";
+import useTranslation from "../hooks/useTranslation";
 import { createOrder, getProducts, Order } from "../services/firebaseService";
 import { fetchPlaceSuggestions } from "../services/placeService";
 
@@ -24,6 +25,7 @@ export default function CartScreen() {
   const router = useRouter();
   const { cartItems, updateQuantity, getTotalPrice, addToCart, clearCart } =
     useCart();
+  const { t } = useTranslation();
 
   const [contactInfo, setContactInfo] = useState({
     name: "Nguyễn Văn A",
@@ -204,18 +206,18 @@ export default function CartScreen() {
       await updateDoc(doc(db, "users", user.uid), { address: newAddresses });
       setAddresses(newAddresses);
       setContactInfo({ ...contactInfo, address: addr });
-    } catch (err) {
-      console.error("Error setting default address:", err);
-      Alert.alert("Lỗi", "Không thể đặt địa chỉ mặc định. Vui lòng thử lại.");
-    }
+      } catch (err) {
+        console.error("Error setting default address:", err);
+        Alert.alert(t("cart.alerts.setDefaultError"), t("cart.alerts.setDefaultErrorMessage"));
+      }
   };
 
   // Delete address at index and persist; update contactInfo if necessary
   const handleDeleteAddress = async (index: number) => {
-    Alert.alert("Xóa địa chỉ", "Bạn có chắc muốn xóa địa chỉ này?", [
-      { text: "Hủy", style: "cancel" },
+    Alert.alert(t("cart.alerts.deleteAddress"), t("cart.alerts.deleteAddressMessage"), [
+      { text: t("common.cancel"), style: "cancel" },
       {
-        text: "Xóa",
+        text: t("cart.alerts.delete"),
         style: "destructive",
         onPress: async () => {
           try {
@@ -237,7 +239,7 @@ export default function CartScreen() {
             }
           } catch (err) {
             console.error("Error deleting address:", err);
-            Alert.alert("Lỗi", "Không thể xóa địa chỉ. Vui lòng thử lại.");
+            Alert.alert(t("cart.alerts.deleteError"), t("cart.alerts.deleteErrorMessage"));
           }
         },
       },
@@ -246,39 +248,37 @@ export default function CartScreen() {
 
   const handleCheckout = async () => {
     if (cartItems.length === 0) {
-      Alert.alert("Giỏ hàng trống", "Vui lòng thêm sản phẩm vào giỏ hàng");
+      Alert.alert(t("cart.alerts.emptyCart"), t("cart.alerts.emptyCartMessage"));
       return;
     }
 
     if (!contactInfo.address || contactInfo.address.trim() === "") {
-      Alert.alert("Lỗi", "Vui lòng nhập địa chỉ giao hàng");
+      Alert.alert(t("cart.alerts.errorAddress"), t("cart.alerts.errorAddressMessage"));
       return;
     }
 
     if (!paymentMethod) {
-      Alert.alert("Lỗi", "Vui lòng chọn phương thức thanh toán");
+      Alert.alert(t("cart.alerts.errorPayment"), t("cart.alerts.errorPaymentMessage"));
       return;
     }
 
     const totalPrice = getTotalPrice();
 
     Alert.alert(
-      "Xác nhận đặt hàng",
-      `Phương thức: ${
-        paymentMethod === "cash" ? "Tiền mặt" : "Momo"
-      }\nTổng tiền: ${totalPrice.toLocaleString(
-        "vi-VN"
-      )} đ\n\nBạn có muốn đặt hàng không?`,
+      t("cart.alerts.confirmOrder"),
+      t("cart.alerts.confirmOrderMessage")
+        .replace("{method}", paymentMethod === "cash" ? t("orders.cash") : "Momo")
+        .replace("{amount}", totalPrice.toLocaleString("vi-VN")),
       [
-        { text: "Hủy", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Đặt hàng",
+          text: t("cart.alerts.confirmOrderButton"),
           onPress: async () => {
             setIsProcessing(true);
             try {
               const user = auth.currentUser;
               if (!user) {
-                Alert.alert("Lỗi", "Vui lòng đăng nhập lại");
+                Alert.alert(t("cart.alerts.loginError"), t("cart.alerts.loginErrorMessage"));
                 setIsProcessing(false);
                 return;
               }
@@ -332,11 +332,11 @@ export default function CartScreen() {
                 } else {
                   // For cash payment, mark order as confirmed immediately
                   Alert.alert(
-                    "Thành công",
-                    "Đơn hàng của bạn đã được đặt! Bạn sẽ được chuyển hướng tới trang theo dõi đơn hàng.",
+                    t("cart.alerts.success"),
+                    t("cart.alerts.successMessage"),
                     [
                       {
-                        text: "OK",
+                        text: t("common.ok"),
                         onPress: () => {
                           clearCart();
                           router.replace("/(customer)/(stack)/orders");
@@ -346,11 +346,11 @@ export default function CartScreen() {
                   );
                 }
               } else {
-                Alert.alert("Lỗi", "Không thể tạo đơn hàng. Vui lòng thử lại");
+                Alert.alert(t("cart.alerts.orderError"), t("cart.alerts.orderErrorMessage"));
               }
             } catch (error) {
               console.error("Error creating order:", error);
-              Alert.alert("Lỗi", "Có lỗi khi tạo đơn hàng. Vui lòng thử lại");
+              Alert.alert(t("cart.alerts.createOrderError"), t("cart.alerts.createOrderErrorMessage"));
             } finally {
               setIsProcessing(false);
             }
@@ -399,7 +399,7 @@ export default function CartScreen() {
         >
           <Text style={styles.backButtonText}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Giỏ hàng</Text>
+        <Text style={styles.headerTitle}>{t("cart.title")}</Text>
         <View style={styles.headerRight} />
       </View>
 
@@ -407,10 +407,10 @@ export default function CartScreen() {
         {/* Contact Info */}
         <View style={styles.contactSection}>
           <View style={styles.contactHeader}>
-            <Text style={styles.sectionTitle}>Thông tin liên lạc</Text>
+            <Text style={styles.sectionTitle}>{t("cart.contactInfo")}</Text>
             <TouchableOpacity onPress={handleToggleEdit}>
               <Text style={styles.editButton}>
-                {isEditingContact ? "Lưu" : "Chỉnh sửa"}
+                {isEditingContact ? t("cart.save") : t("cart.edit")}
               </Text>
             </TouchableOpacity>
           </View>
@@ -419,7 +419,7 @@ export default function CartScreen() {
             <View style={styles.contactForm}>
               <TextInput
                 style={styles.input}
-                placeholder="Họ tên"
+                placeholder={t("cart.namePlaceholder")}
                 value={contactInfo.name}
                 onChangeText={(text) =>
                   setContactInfo({ ...contactInfo, name: text })
@@ -427,7 +427,7 @@ export default function CartScreen() {
               />
               <TextInput
                 style={styles.input}
-                placeholder="Số điện thoại"
+                placeholder={t("cart.phonePlaceholder")}
                 value={contactInfo.phone}
                 onChangeText={(text) =>
                   setContactInfo({ ...contactInfo, phone: text })
@@ -438,7 +438,7 @@ export default function CartScreen() {
                 <View style={{ flex: 1 }}>
                   <TextInput
                     style={[styles.input, { flex: 1 }]}
-                    placeholder="Địa chỉ"
+                    placeholder={t("cart.addressPlaceholder")}
                     value={contactInfo.address}
                     onChangeText={handleAddressChange}
                     onKeyPress={(e: any) => {
@@ -578,7 +578,7 @@ export default function CartScreen() {
                   onPress={() => setAddressModalVisible(true)}
                 >
                   <Text style={{ color: "#FFC107", fontWeight: "600" }}>
-                    Đổi địa chỉ
+                    {t("cart.changeAddress")}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -604,21 +604,21 @@ export default function CartScreen() {
         {/* Cart Items */}
         <View style={styles.cartSection}>
           <Text style={styles.sectionTitle}>
-            Có {cartItems.length} sản phẩm trong giỏ hàng của bạn
+            {t("cart.cartItems").replace("{count}", String(cartItems.length))}
           </Text>
 
           {cartItems.length === 0 ? (
             <View style={styles.emptyCart}>
-              <Text style={styles.emptyCartText}>🛒</Text>
+              <Text style={styles.emptyCartText}>{t("cart.emptyCart")}</Text>
               <Text style={styles.emptyCartMessage}>
-                Giỏ hàng của bạn đang trống
+                {t("cart.emptyCartMessage")}
               </Text>
               <TouchableOpacity
                 style={styles.continueShopping}
                 onPress={() => router.back()}
               >
                 <Text style={styles.continueShoppingText}>
-                  Tiếp tục mua sắm
+                  {t("cart.continueShopping")}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -628,6 +628,7 @@ export default function CartScreen() {
                 key={`${item.id}-${item.selectedSize}`}
                 item={item}
                 onQuantityChange={handleQuantityChange}
+                t={t}
               />
             ))
           )}
@@ -636,7 +637,7 @@ export default function CartScreen() {
         {/* Suggested Products */}
         {suggestedProducts.length > 0 && (
           <View style={styles.suggestedSection}>
-            <Text style={styles.sectionTitle}>Đặt thêm sản phẩm khác</Text>
+            <Text style={styles.sectionTitle}>{t("cart.suggestedProducts")}</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -655,7 +656,7 @@ export default function CartScreen() {
 
         {/* Total */}
         <View style={styles.totalSection}>
-          <Text style={styles.totalLabel}>Tổng tiền:</Text>
+          <Text style={styles.totalLabel}>{t("cart.total")}</Text>
           <Text style={styles.totalAmount}>
             {getTotalPrice().toLocaleString("vi-VN")} đ
           </Text>
@@ -663,7 +664,7 @@ export default function CartScreen() {
 
         {/* Payment Method */}
         <View style={styles.paymentSection}>
-          <Text style={styles.sectionTitle}>Phương thức thanh toán</Text>
+          <Text style={styles.sectionTitle}>{t("cart.paymentMethod")}</Text>
 
           <TouchableOpacity
             style={[
@@ -683,7 +684,7 @@ export default function CartScreen() {
               )}
             </View>
             <Text style={styles.paymentOptionText}>
-              Thanh toán bằng tiền mặt khi nhận hàng
+              {t("cart.cashOnDelivery")}
             </Text>
           </TouchableOpacity>
 
@@ -705,7 +706,7 @@ export default function CartScreen() {
               )}
             </View>
             <Text style={styles.paymentOptionText}>
-              Thanh toán bằng ví điện tử Momo (mô phỏng)
+              {t("cart.momoPayment")}
             </Text>
           </TouchableOpacity>
         </View>
@@ -726,6 +727,7 @@ export default function CartScreen() {
           setSizeModalVisible(false);
           setSelectedProductForSize(null);
         }}
+        t={t}
       />
 
       {/* Address Selection Modal */}
@@ -812,6 +814,7 @@ export default function CartScreen() {
           setSizeModalVisible(false);
           setSelectedProductForSize(null);
         }}
+        t={t}
       />
 
       {/* Address Selection Modal */}
@@ -893,7 +896,7 @@ export default function CartScreen() {
           disabled={isProcessing}
         >
           <Text style={styles.checkoutButtonText}>
-            {isProcessing ? "Đang xử lý..." : "Thanh toán"}
+            {isProcessing ? t("cart.processing") : t("cart.checkout")}
           </Text>
         </TouchableOpacity>
       </View>
@@ -902,7 +905,7 @@ export default function CartScreen() {
 }
 
 // Cart Item Card Component
-function CartItemCard({ item, onQuantityChange }: any) {
+function CartItemCard({ item, onQuantityChange, t }: any) {
   const imageUrl =
     item.imageUrl || item.image || "https://via.placeholder.com/80";
   const displayPrice = item.selectedSizePrice || item.price;
@@ -913,7 +916,7 @@ function CartItemCard({ item, onQuantityChange }: any) {
       <View style={styles.cartItemInfo}>
         <Text style={styles.cartItemName}>{item.name}</Text>
         {item.selectedSize && (
-          <Text style={styles.cartItemSize}>Size: {item.selectedSize}</Text>
+          <Text style={styles.cartItemSize}>{t("cart.sizeLabel")} {item.selectedSize}</Text>
         )}
         <Text style={styles.cartItemPrice}>
           {displayPrice.toLocaleString("vi-VN")} đ
@@ -972,7 +975,7 @@ function SuggestedProductCard({ product, onAdd }: any) {
 }
 
 // Size Selection Modal Component (used for suggested burgers)
-function SizeSelectionModal({ visible, product, onClose, onConfirm }: any) {
+function SizeSelectionModal({ visible, product, onClose, onConfirm, t }: any) {
   const [selectedSize, setSelectedSize] = useState<any>(null);
 
   const handleConfirm = () => {
@@ -990,7 +993,7 @@ function SizeSelectionModal({ visible, product, onClose, onConfirm }: any) {
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Chọn size cho {product?.name}</Text>
+          <Text style={styles.modalTitle}>{t("cart.sizeModal.title").replace("{productName}", product?.name || "")}</Text>
 
           <View style={styles.modalSizeOptions}>
             {product?.sizes?.map((size: any) => (
@@ -1024,7 +1027,7 @@ function SizeSelectionModal({ visible, product, onClose, onConfirm }: any) {
                 onClose();
               }}
             >
-              <Text style={styles.modalCancelBtnText}>Hủy</Text>
+              <Text style={styles.modalCancelBtnText}>{t("cart.sizeModal.cancel")}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
@@ -1034,7 +1037,7 @@ function SizeSelectionModal({ visible, product, onClose, onConfirm }: any) {
               onPress={handleConfirm}
               disabled={!selectedSize}
             >
-              <Text style={styles.modalConfirmBtnText}>Thêm vào giỏ</Text>
+              <Text style={styles.modalConfirmBtnText}>{t("cart.sizeModal.addToCart")}</Text>
             </TouchableOpacity>
           </View>
         </View>

@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import useTranslation from "../../hooks/useTranslation";
 
 interface Size {
   key: string;
@@ -31,6 +32,7 @@ interface Product {
 export default function GuestProductDetailScreen() {
   const router = useRouter();
   const { productId, collection } = useLocalSearchParams();
+  const { t } = useTranslation();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -76,7 +78,7 @@ export default function GuestProductDetailScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#e63946" />
-          <Text style={styles.loadingText}>Đang tải...</Text>
+          <Text style={styles.loadingText}>{t("productDetail.loading")}</Text>
         </View>
       </SafeAreaView>
     );
@@ -92,11 +94,11 @@ export default function GuestProductDetailScreen() {
           >
             <Text style={styles.backButtonText}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Chi tiết sản phẩm</Text>
+          <Text style={styles.headerTitle}>{t("productDetail.title")}</Text>
           <View style={styles.headerRight} />
         </View>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Không tìm thấy sản phẩm</Text>
+          <Text style={styles.loadingText}>{t("productDetail.notFound")}</Text>
         </View>
       </SafeAreaView>
     );
@@ -110,16 +112,16 @@ export default function GuestProductDetailScreen() {
   const handleAddToCart = () => {
     // Show login prompt for guest users
     Alert.alert(
-      "Vui lòng đăng nhập",
-      "Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng",
+      t("productDetail.alerts.pleaseLogin"),
+      t("productDetail.alerts.loginToAdd"),
       [
         {
-          text: "Hủy",
+          text: t("common.cancel"),
           onPress: () => { },
           style: "cancel",
         },
         {
-          text: "Đăng nhập",
+          text: t("productDetail.alerts.login"),
           onPress: () => {
             router.push("/auth/login");
           },
@@ -142,7 +144,7 @@ export default function GuestProductDetailScreen() {
         >
           <Text style={styles.backButtonText}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Chi tiết sản phẩm</Text>
+          <Text style={styles.headerTitle}>{t("productDetail.title")}</Text>
         <View style={styles.headerRight} />
       </View>
 
@@ -161,7 +163,7 @@ export default function GuestProductDetailScreen() {
           {/* Size Selection */}
           {product.sizes && product.sizes.length > 0 && (
             <View style={styles.sizeSection}>
-              <Text style={styles.sectionTitle}>Chọn size:</Text>
+              <Text style={styles.sectionTitle}>{t("productDetail.selectSize")}</Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -198,7 +200,7 @@ export default function GuestProductDetailScreen() {
 
           {/* Quantity Selector */}
           <View style={styles.quantitySection}>
-            <Text style={styles.sectionTitle}>Số lượng:</Text>
+            <Text style={styles.sectionTitle}>{t("productDetail.quantity")}</Text>
             <View style={styles.quantityControls}>
               <TouchableOpacity
                 style={styles.quantityButton}
@@ -227,7 +229,7 @@ export default function GuestProductDetailScreen() {
           <Text style={styles.cartIconText}>🛒</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.orderButton} onPress={handleOrder}>
-          <Text style={styles.orderButtonText}>Đặt hàng</Text>
+          <Text style={styles.orderButtonText}>{t("productDetail.orderButton")}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

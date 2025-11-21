@@ -12,6 +12,7 @@ import {
   View
 } from "react-native";
 import { auth } from "../config/firebaseConfig";
+import useTranslation from "../hooks/useTranslation";
 import { Category, Product as FirebaseProduct, getCategories, getProducts } from "../services/firebaseService";
 
 export default function HomeScreen() {
@@ -19,6 +20,7 @@ export default function HomeScreen() {
   const [products, setProducts] = useState<FirebaseProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, () => {
@@ -78,7 +80,7 @@ export default function HomeScreen() {
       </View>
 
       {/* Mục bạn sẽ thích */}
-      <Text style={styles.sectionTitle}>Bạn sẽ thích</Text>
+      <Text style={styles.sectionTitle}>{t("home.youWillLike")}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         {products
           .filter((p) => p.category === "burgers")
@@ -95,7 +97,7 @@ export default function HomeScreen() {
                 {(() => {
                   const smallPrice = item.sizes?.find((s) => s.key === "small")?.price;
                   const display = typeof smallPrice === "number" ? smallPrice : item.price || 0;
-                  return `Chỉ từ ${display.toLocaleString()}₫`;
+                  return `${t("home.from")} ${display.toLocaleString()}₫`;
                 })()}
               </Text>
               <TouchableOpacity
@@ -113,9 +115,9 @@ export default function HomeScreen() {
 
       {/* Menu */}
       <View style={styles.menuHeader}>
-        <Text style={styles.sectionTitle}>Menu</Text>
+        <Text style={styles.sectionTitle}>{t("home.menu")}</Text>
         <TouchableOpacity onPress={() => router.push({ pathname: "/(guest)/menu" as any })}>
-          <Text style={{ color: "#FFC107", fontWeight: "500" }}>Xem thêm</Text>
+          <Text style={{ color: "#FFC107", fontWeight: "500" }}>{t("home.seeMore")}</Text>
         </TouchableOpacity>
       </View>
 
@@ -137,34 +139,34 @@ export default function HomeScreen() {
       <TouchableOpacity style={styles.optionBox} onPress={handleNavigateToAuth}>
         <Ionicons name="bag-outline" size={22} color="#FFC107" />
         <View>
-          <Text style={styles.optionTitle}>Theo dõi đơn hàng</Text>
-          <Text style={styles.optionDesc}>Dễ dàng theo dõi trạng thái đơn hàng</Text>
+          <Text style={styles.optionTitle}>{t("home.trackOrders")}</Text>
+          <Text style={styles.optionDesc}>{t("home.trackOrdersDesc")}</Text>
         </View>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.optionBox} onPress={handleNavigateToStores}>
         <Ionicons name="storefront-outline" size={22} color="#FFC107" />
         <View>
-          <Text style={styles.optionTitle}>Cửa hàng của chúng tôi</Text>
+          <Text style={styles.optionTitle}>{t("home.ourStores")}</Text>
         </View>
       </TouchableOpacity>
 
       <View style={styles.divider} />
 
-      <Text style={styles.sectionTitle}>Kết nối với BurgerFast</Text>
+      <Text style={styles.sectionTitle}>{t("home.connectWithUs")}</Text>
 
       <TouchableOpacity style={styles.optionBox}>
         <Ionicons name="call-outline" size={22} color="#FFC107" />
         <View>
-          <Text style={styles.optionTitle}>Cần trợ giúp?</Text>
-          <Text style={styles.optionDesc}>Gọi 1900 1822</Text>
+          <Text style={styles.optionTitle}>{t("home.needHelp")}</Text>
+          <Text style={styles.optionDesc}>{t("home.helpPhone")}</Text>
         </View>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.optionBox} onPress={() => router.push("/(guest)/(stack)/terms")}>
         <Ionicons name="document-text-outline" size={22} color="#FFC107" />
         <View>
-          <Text style={styles.optionTitle}>Điều khoản và Điều kiện</Text>
+          <Text style={styles.optionTitle}>{t("common.termsAndConditions")}</Text>
         </View>
       </TouchableOpacity>
     </ScrollView>

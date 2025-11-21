@@ -16,6 +16,7 @@ import {
   View,
 } from "react-native";
 import { auth } from "../../config/firebaseConfig";
+import useTranslation from "../../hooks/useTranslation";
 
 export default function HomeScreen() {
   // no local user state needed here; auth listener will redirect if not logged in
@@ -26,6 +27,7 @@ export default function HomeScreen() {
   const [selectedProductForSize, setSelectedProductForSize] = useState<FirebaseProduct | null>(null);
   const { addToCart } = useCart();
   const router = useRouter();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -43,7 +45,7 @@ export default function HomeScreen() {
         setProducts(prods);
       } catch (error) {
         console.error("Error loading data:", error);
-        Alert.alert("Lỗi", "Không thể tải dữ liệu. Vui lòng thử lại.");
+        Alert.alert(t("common.ok"), t("home.errorLoading"));
       } finally {
         setLoading(false);
       }
@@ -80,7 +82,7 @@ export default function HomeScreen() {
 
 
       {/* Mục bạn sẽ thích */}
-      <Text style={styles.sectionTitle}>Bạn sẽ thích</Text>
+      <Text style={styles.sectionTitle}>{t("home.youWillLike")}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         {products
           .filter((p) => p.category === "burgers")
@@ -100,7 +102,7 @@ export default function HomeScreen() {
                 {(() => {
                   const smallPrice = item.sizes?.find((s) => s.key === "small")?.price;
                   const display = typeof smallPrice === "number" ? smallPrice : item.price || 0;
-                  return `Chỉ từ ${display.toLocaleString("vi-VN")}₫`;
+                  return `${t("home.from")} ${display.toLocaleString("vi-VN")}₫`;
                 })()}
               </Text>
 
@@ -126,9 +128,9 @@ export default function HomeScreen() {
       {/* Menu */}
       {/* Menu: categories + products */}
       <View style={styles.menuHeader}>
-        <Text style={styles.sectionTitle}>Menu</Text>
+        <Text style={styles.sectionTitle}>{t("home.menu")}</Text>
         <TouchableOpacity onPress={() => router.push({ pathname: "/(tabs)/menu" as any })}>
-          <Text style={{ color: "#FFC107", fontWeight: "500" }}>Xem thêm</Text>
+          <Text style={{ color: "#FFC107", fontWeight: "500" }}>{t("home.seeMore")}</Text>
         </TouchableOpacity>
       </View>
 
@@ -155,34 +157,34 @@ export default function HomeScreen() {
       <TouchableOpacity style={styles.optionBox} onPress={() => router.push({ pathname: "/(stack)/orders" as any })}>
         <Ionicons name="bag-outline" size={22} color="#FFC107" />
         <View>
-          <Text style={styles.optionTitle}>Theo dõi đơn hàng</Text>
-          <Text style={styles.optionDesc}>Dễ dàng theo dõi trạng thái đơn hàng</Text>
+          <Text style={styles.optionTitle}>{t("home.trackOrders")}</Text>
+          <Text style={styles.optionDesc}>{t("home.trackOrdersDesc")}</Text>
         </View>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.optionBox} onPress={() => router.push({ pathname: "/(stack)/stores" as any })}>
         <Ionicons name="storefront-outline" size={22} color="#FFC107" />
         <View>
-          <Text style={styles.optionTitle}>Cửa hàng của chúng tôi</Text>
+          <Text style={styles.optionTitle}>{t("home.ourStores")}</Text>
         </View>
       </TouchableOpacity>
 
       <View style={styles.divider} />
 
-      <Text style={styles.sectionTitle}>Kết nối với BurgerFast</Text>
+      <Text style={styles.sectionTitle}>{t("home.connectWithUs")}</Text>
 
       <TouchableOpacity style={styles.optionBox}>
         <Ionicons name="call-outline" size={22} color="#FFC107" />
         <View>
-          <Text style={styles.optionTitle}>Cần trợ giúp?</Text>
-          <Text style={styles.optionDesc}>Gọi 1900 1822</Text>
+          <Text style={styles.optionTitle}>{t("home.needHelp")}</Text>
+          <Text style={styles.optionDesc}>{t("home.helpPhone")}</Text>
         </View>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.optionBox} onPress={() => router.push({ pathname: "/(stack)/terms" as any })}>
         <Ionicons name="document-text-outline" size={22} color="#FFC107" />
         <View>
-          <Text style={styles.optionTitle}>Điều khoản và Điều kiện</Text>
+          <Text style={styles.optionTitle}>{t("common.termsAndConditions")}</Text>
         </View>
       </TouchableOpacity>
 
@@ -199,6 +201,7 @@ export default function HomeScreen() {
         onConfirm={(product: any, qty: number, sizeName: string, sizePrice: number) => {
           addToCart(product, qty, sizeName, sizePrice);
         }}
+        t={t}
       />
     </ScrollView>
   );
@@ -409,7 +412,7 @@ const styles = StyleSheet.create({
 });
 
 // Size Selection Modal Component (adapted from menu.tsx)
-function SizeSelectionModal({ visible, product, onClose, onConfirm }: any) {
+function SizeSelectionModal({ visible, product, onClose, onConfirm, t }: any) {
   const [selectedSize, setSelectedSize] = useState<any>(null);
 
   const handleConfirm = () => {
@@ -429,7 +432,7 @@ function SizeSelectionModal({ visible, product, onClose, onConfirm }: any) {
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Chọn size cho {product?.name}</Text>
+          <Text style={styles.modalTitle}>{t("home.sizeModal.title").replace("{productName}", product?.name || "")}</Text>
 
           <View style={styles.modalSizeOptions}>
             {product?.sizes?.map((size: any) => (
@@ -455,7 +458,7 @@ function SizeSelectionModal({ visible, product, onClose, onConfirm }: any) {
 
           <View style={styles.modalButtons}>
             <TouchableOpacity style={styles.modalCancelBtn} onPress={onClose}>
-              <Text style={styles.modalCancelBtnText}>Hủy</Text>
+              <Text style={styles.modalCancelBtnText}>{t("home.sizeModal.cancel")}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
@@ -465,7 +468,7 @@ function SizeSelectionModal({ visible, product, onClose, onConfirm }: any) {
               onPress={handleConfirm}
               disabled={!selectedSize}
             >
-              <Text style={styles.modalConfirmBtnText}>Thêm vào giỏ</Text>
+              <Text style={styles.modalConfirmBtnText}>{t("home.sizeModal.addToCart")}</Text>
             </TouchableOpacity>
           </View>
         </View>

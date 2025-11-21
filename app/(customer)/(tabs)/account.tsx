@@ -88,7 +88,7 @@ export default function CustomerAccount() {
   if (!userData) {
     return (
       <View style={styles.loadingContainer}>
-        <Text>Đang tải thông tin...</Text>
+        <Text>{t("customerAccount.loading")}</Text>
       </View>
     );
   }

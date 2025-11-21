@@ -446,7 +446,7 @@ export default function OrdersScreen() {
                             orderId: selectedOrder.id || "",
                             amount: selectedOrder.total,
                             recipientPhone: momoConfig.merchantPhone,
-                            note: `Thanh toán đơn ${selectedOrder.id}`,
+                            note: `${t("orders.paymentNote")} ${selectedOrder.id}`,
                             returnUrl,
                           });
                         } catch (e) {
@@ -460,7 +460,7 @@ export default function OrdersScreen() {
                     >
                       <Ionicons name="wallet" size={18} color="#fff" />
                       <Text style={styles.actionButtonText}>
-                        {"Mở Momo để thanh toán"}
+                        {t("orders.openMomo")}
                       </Text>
                     </TouchableOpacity>
                   )}
@@ -471,7 +471,7 @@ export default function OrdersScreen() {
                     Alert.alert(
                       t("orders.needHelp"),
                       t("orders.contactSupport"),
-                      [{ text: "OK" }]
+                      [{ text: t("common.ok") }]
                     );
                   }}
                 >

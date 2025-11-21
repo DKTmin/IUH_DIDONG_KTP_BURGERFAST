@@ -13,11 +13,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import useTranslation from "../../hooks/useTranslation";
 
 export default function ProductDetailScreen() {
   const router = useRouter();
   const { productId, collection } = useLocalSearchParams();
   const { addToCart } = useCart();
+  const { t } = useTranslation();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,7 +64,7 @@ export default function ProductDetailScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#e63946" />
-          <Text style={styles.loadingText}>Đang tải...</Text>
+          <Text style={styles.loadingText}>{t("productDetail.loading")}</Text>
         </View>
       </SafeAreaView>
     );
@@ -78,11 +80,11 @@ export default function ProductDetailScreen() {
           >
             <Text style={styles.backButtonText}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Chi tiết sản phẩm</Text>
+          <Text style={styles.headerTitle}>{t("productDetail.title")}</Text>
           <View style={styles.headerRight} />
         </View>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Không tìm thấy sản phẩm</Text>
+          <Text style={styles.loadingText}>{t("productDetail.notFound")}</Text>
         </View>
       </SafeAreaView>
     );
@@ -95,7 +97,7 @@ export default function ProductDetailScreen() {
 
   const handleAddToCart = () => {
     if (product?.sizes && product.sizes.length > 0 && !selectedSize) {
-      Alert.alert("Thông báo", "Vui lòng chọn size");
+      Alert.alert(t("productDetail.alerts.notification"), t("productDetail.alerts.selectSize"));
       return;
     }
     addToCart(product, quantity, selectedSize, selectedSizePrice);
@@ -103,7 +105,7 @@ export default function ProductDetailScreen() {
 
   const handleOrder = () => {
     if (product?.sizes && product.sizes.length > 0 && !selectedSize) {
-      Alert.alert("Thông báo", "Vui lòng chọn size");
+      Alert.alert(t("productDetail.alerts.notification"), t("productDetail.alerts.selectSize"));
       return;
     }
     addToCart(product, quantity, selectedSize, selectedSizePrice);
@@ -120,7 +122,7 @@ export default function ProductDetailScreen() {
         >
           <Text style={styles.backButtonText}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Chi tiết sản phẩm</Text>
+          <Text style={styles.headerTitle}>{t("productDetail.title")}</Text>
         <View style={styles.headerRight} />
       </View>
 
@@ -139,7 +141,7 @@ export default function ProductDetailScreen() {
           {/* Size Selection */}
           {product.sizes && product.sizes.length > 0 && (
             <View style={styles.sizeSection}>
-              <Text style={styles.sectionTitle}>Chọn size:</Text>
+              <Text style={styles.sectionTitle}>{t("productDetail.selectSize")}</Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -176,7 +178,7 @@ export default function ProductDetailScreen() {
 
           {/* Quantity Selector */}
           <View style={styles.quantitySection}>
-            <Text style={styles.sectionTitle}>Số lượng:</Text>
+            <Text style={styles.sectionTitle}>{t("productDetail.quantity")}</Text>
             <View style={styles.quantityControls}>
               <TouchableOpacity
                 style={styles.quantityButton}
@@ -205,7 +207,7 @@ export default function ProductDetailScreen() {
           <Text style={styles.cartIconText}>🛒</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.orderButton} onPress={handleOrder}>
-          <Text style={styles.orderButtonText}>Đặt hàng</Text>
+          <Text style={styles.orderButtonText}>{t("productDetail.orderButton")}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
