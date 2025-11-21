@@ -89,8 +89,6 @@ export default function OrdersScreen() {
         return "check-circle-outline";
       case "preparing":
         return "chef-hat";
-      case "delivering":
-        return "truck-fast";
       case "delivered":
         return "home-check";
       case "cancelled":
@@ -253,13 +251,13 @@ export default function OrdersScreen() {
                             backgroundColor: getStatusColor(status),
                             opacity:
                               selectedOrder.status === status ||
-                                [
-                                  "pending",
-                                  "confirmed",
-                                  "preparing",
-                                  "delivering",
-                                  "delivered",
-                                ].indexOf(selectedOrder.status) >= index
+                              [
+                                "pending",
+                                "confirmed",
+                                "preparing",
+                                "delivering",
+                                "delivered",
+                              ].indexOf(selectedOrder.status) >= index
                                 ? 1
                                 : 0.3,
                           },
@@ -441,7 +439,8 @@ export default function OrdersScreen() {
                       style={[styles.actionButton, { marginBottom: 8 }]}
                       onPress={async () => {
                         try {
-                          const appScheme = momoConfig.appScheme || "burgerappreactnative";
+                          const appScheme =
+                            momoConfig.appScheme || "burgerappreactnative";
                           const returnUrl = `${appScheme}://momo-return?orderId=${selectedOrder.id}`;
                           await initiateMomoPayment({
                             orderId: selectedOrder.id || "",
@@ -452,12 +451,17 @@ export default function OrdersScreen() {
                           });
                         } catch (e) {
                           console.error(e);
-                          Alert.alert(t("orders.paymentFailed"), t("orders.paymentFailedMessage"));
+                          Alert.alert(
+                            t("orders.paymentFailed"),
+                            t("orders.paymentFailedMessage")
+                          );
                         }
                       }}
                     >
                       <Ionicons name="wallet" size={18} color="#fff" />
-                      <Text style={styles.actionButtonText}>{"Mở Momo để thanh toán"}</Text>
+                      <Text style={styles.actionButtonText}>
+                        {"Mở Momo để thanh toán"}
+                      </Text>
                     </TouchableOpacity>
                   )}
 
