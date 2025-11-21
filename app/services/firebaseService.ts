@@ -6,6 +6,7 @@ import {
   getDocs,
   query,
   serverTimestamp,
+  updateDoc,
   where,
 } from "firebase/firestore";
 import { db } from "../config/firebaseConfig";
@@ -350,17 +351,24 @@ export interface Order {
   items: OrderItem[];
   total: number;
   status:
-    | "pending"
-    | "confirmed"
-    | "preparing"
-    | "delivering"
-    | "delivered"
-    | "cancelled";
+  | "pending"
+  | "confirmed"
+  | "preparing"
+  | "delivering"
+  | "delivered"
+  | "cancelled";
   paymentMethod: "cash" | "momo";
   contactInfo: {
     name: string;
     phone: string;
     address: string;
+  };
+  paymentStatus?: "pending" | "paid" | "failed";
+  momoTransactionId?: string | null;
+  paymentAttempt?: {
+    provider: string;
+    amount: number;
+    startedAt: string;
   };
   createdAt: any;
   updatedAt?: any;
@@ -370,9 +378,33 @@ export interface Order {
 // Create new order
 export async function createOrder(orderData: Order): Promise<string | null> {
   try {
+    // Sanitize orderData to remove any `undefined` values (Firestore rejects undefined)
+    function sanitize(value: any): any {
+      if (value === undefined) return undefined;
+      if (value === null) return null;
+      if (value instanceof Date) return value;
+      if (Array.isArray(value)) {
+        return value.map((v) => sanitize(v));
+      }
+      if (typeof value === "object") {
+        const out: any = {};
+        Object.entries(value).forEach(([k, v]) => {
+          const s = sanitize(v);
+          if (s !== undefined) out[k] = s;
+        });
+        return out;
+      }
+      return value;
+    }
+
     const ordersRef = collection(db, "orders");
+    const clean = sanitize(orderData) as any;
+    // Ensure createdAt/updatedAt are set by serverTimestamp rather than passing Date objects
+    delete clean.createdAt;
+    delete clean.updatedAt;
+
     const docRef = await addDoc(ordersRef, {
-      ...orderData,
+      ...clean,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
@@ -420,5 +452,40 @@ export async function getOrderById(orderId: string): Promise<Order | null> {
   } catch (error) {
     console.error("Error fetching order:", error);
     return null;
+  }
+}
+
+// Update order fields (partial update)
+export async function updateOrder(
+  orderId: string,
+  data: Partial<Order> & { [key: string]: any }
+): Promise<boolean> {
+  try {
+    const orderRef = doc(db, "orders", orderId);
+    await updateDoc(orderRef, { ...data, updatedAt: serverTimestamp() });
+    return true;
+  } catch (error) {
+    console.error("Error updating order:", error);
+    return false;
+  }
+}
+
+// Helper to mark order as paid (momo)
+export async function markOrderPaid(
+  orderId: string,
+  momoTransactionId?: string
+): Promise<boolean> {
+  try {
+    const orderRef = doc(db, "orders", orderId);
+    await updateDoc(orderRef, {
+      status: "confirmed",
+      paymentStatus: "paid",
+      momoTransactionId: momoTransactionId || null,
+      updatedAt: serverTimestamp(),
+    });
+    return true;
+  } catch (error) {
+    console.error("Error marking order paid:", error);
+    return false;
   }
 }
