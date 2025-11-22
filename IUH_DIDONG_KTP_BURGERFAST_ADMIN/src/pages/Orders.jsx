@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
-import { listenOrders, updateOrderStatus } from "../services/orderService";
-import { getDoc, doc as docRef } from "firebase/firestore";
+import { doc as docRef, getDoc } from "firebase/firestore";
+import { useEffect, useState } from "react";
 import { db } from "../firebase/firebaseConfig";
+import { listenOrders, updateOrderStatus } from "../services/orderService";
+import { getBurgers, getDrinks, getCombos } from "../services/menuService";
 
 const STATUS = [
   "all",
@@ -45,7 +46,11 @@ function exportCSV(items) {
 export default function Orders() {
   const [orders, setOrders] = useState([]);
   const [pageInput, setPageInput] = useState("");
+  const [pageError, setPageError] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [customerNameFilter, setCustomerNameFilter] = useState("");
+  const [products, setProducts] = useState({ burgers: [], drinks: [], combos: [] });
+  const [productFilter, setProductFilter] = useState("all");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [page, setPage] = useState(1);
@@ -54,6 +59,27 @@ export default function Orders() {
   useEffect(() => {
     const unsub = listenOrders(setOrders);
     return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadProducts() {
+      try {
+        const [burgers, drinks, combos] = await Promise.all([
+          getBurgers(),
+          getDrinks(),
+          getCombos(),
+        ]);
+        if (!cancelled)
+          setProducts({ burgers: burgers || [], drinks: drinks || [], combos: combos || [] });
+      } catch (_e) {
+        // ignore
+      }
+    }
+    loadProducts();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // resolve missing customer names by looking up users collection
@@ -79,7 +105,7 @@ export default function Orders() {
                   data.name || data.displayName || data.fullName || data.email,
               };
             }
-          } catch (e) {
+          } catch (_e) {
             // ignore
           }
           return o;
@@ -97,10 +123,41 @@ export default function Orders() {
     await updateOrderStatus(id, next);
   }
 
+  function getStatusColor(status) {
+    switch (status) {
+      case "pending":
+        return "#FFC107";
+      case "confirmed":
+        return "#2196F3";
+      case "preparing":
+        return "#FF9800";
+      case "delivering":
+        return "#9C27B0";
+      case "delivered":
+        return "#4CAF50";
+      case "cancelled":
+        return "#F44336";
+      default:
+        return "#999";
+    }
+  }
+
   function applyFilters(list) {
     let out = list.slice();
     if (statusFilter && statusFilter !== "all")
       out = out.filter((o) => o.status === statusFilter);
+    if (customerNameFilter) {
+      out = out.filter((o) => {
+        const name = (o.customerName ?? o.customer?.name ?? "").toLowerCase();
+        return name.includes(customerNameFilter.toLowerCase());
+      });
+    }
+    if (productFilter && productFilter !== "all") {
+      out = out.filter((o) => {
+        const items = o.items || [];
+        return items.some((it) => it.id === productFilter || it.productId === productFilter || it.id === productFilter);
+      });
+    }
     if (fromDate) {
       const f = new Date(fromDate + "T00:00:00");
       out = out.filter((o) => {
@@ -133,147 +190,281 @@ export default function Orders() {
   const visible = filtered.slice((page - 1) * perPage, page * perPage);
 
   return (
-    <div>
-      <h2 className="text-2xl font-semibold mb-4">Orders</h2>
-
-      <div className="flex flex-col md:flex-row gap-3 mb-4 items-end">
-        <div>
-          <label className="text-sm text-slate-600">Status</label>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="block border p-2 rounded mt-1"
-          >
-            {STATUS.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+              Quản lý đơn hàng
+            </h1>
+          </div>
+          <p className="text-gray-600 text-lg">
+            Theo dõi và cập nhật trạng thái đơn hàng của khách hàng
+          </p>
         </div>
 
-        <div>
-          <label className="text-sm text-slate-600">From</label>
-          <input
-            type="date"
-            value={fromDate}
-            onChange={(e) => setFromDate(e.target.value)}
-            className="block border p-2 rounded mt-1"
-          />
-        </div>
-
-        <div>
-          <label className="text-sm text-slate-600">To</label>
-          <input
-            type="date"
-            value={toDate}
-            onChange={(e) => setToDate(e.target.value)}
-            className="block border p-2 rounded mt-1"
-          />
-        </div>
-
-        <div className="ml-auto">
-          <button
-            onClick={() => exportCSV(filtered)}
-            className="bg-green-600 text-white px-3 py-2 rounded"
-          >
-            Export CSV
-          </button>
-        </div>
-      </div>
-
-      <div className="grid gap-3">
-        {visible.map((o) => (
-          <div
-            key={o.id}
-            className="p-4 bg-white rounded shadow flex justify-between items-start"
-          >
+        {/* Filter Controls */}
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 mb-8">
+          <h3 className="text-lg font-bold text-gray-800 mb-4">Bộ lọc</h3>
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
             <div>
-              <div className="font-medium">Order #{o.id}</div>
-              <div className="text-sm text-slate-600">
-                Customer: {o.customerName ?? o.customer?.name ?? "N/A"}
-              </div>
-              <div className="text-sm text-slate-600">
-                Total: {o.total ?? o.amount ?? 0}₫
-              </div>
-              <div className="text-sm mt-2">
-                Items:{" "}
-                {(o.items || []).map((it) => it.title || it.name).join(", ")}
-              </div>
-            </div>
-            <div className="text-right">
-              <div
-                className={`px-3 py-1 rounded text-sm ${
-                  o.status === "delivered"
-                    ? "bg-green-100 text-green-800"
-                    : "bg-slate-100 text-slate-700"
-                }`}
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Trạng thái đơn hàng
+              </label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full border-2 border-gray-300 p-3 rounded-lg focus:border-blue-500 focus:outline-none transition"
               >
-                {o.status}
+                {STATUS.map((s) => (
+                  <option key={s} value={s}>
+                    {s === "all" ? "Tất cả" : s}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Sản phẩm</label>
+              <select
+                value={productFilter}
+                onChange={(e) => setProductFilter(e.target.value)}
+                className="w-full border-2 border-gray-300 p-3 rounded-lg focus:border-blue-500 focus:outline-none transition"
+              >
+                <option value="all">Tất cả sản phẩm</option>
+                <optgroup label="🍔 Burgers">
+                  {products.burgers.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name || p.title || p.id}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="🥤 Drinks">
+                  {products.drinks.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name || p.title || p.id}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="🎯 Combos">
+                  {products.combos.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name || p.title || p.id}
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Tên khách hàng
+              </label>
+              <input
+                type="text"
+                value={customerNameFilter}
+                onChange={(e) => setCustomerNameFilter(e.target.value)}
+                placeholder="Tìm kiếm..."
+                className="w-full border-2 border-gray-300 p-3 rounded-lg focus:border-blue-500 focus:outline-none transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Từ ngày
+              </label>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="w-full border-2 border-gray-300 p-3 rounded-lg focus:border-blue-500 focus:outline-none transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Đến ngày
+              </label>
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                className="w-full border-2 border-gray-300 p-3 rounded-lg focus:border-blue-500 focus:outline-none transition"
+              />
+            </div>
+
+            <div>
+              <button
+                onClick={() => exportCSV(filtered)}
+                className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-lg font-bold hover:shadow-lg transition-all duration-300 transform hover:scale-105"
+              >
+                Xuất CSV
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Orders List */}
+        <div className="space-y-4">
+          {visible.length === 0 ? (
+            <div className="bg-white rounded-2xl shadow-lg p-12 text-center border border-gray-200">
+              <div className="text-5xl mb-4">📭</div>
+              <p className="text-gray-500 text-lg">Không có đơn hàng nào</p>
+            </div>
+          ) : (
+            visible.map((o) => (
+              <div
+                key={o.id}
+                className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 border-l-4 border-blue-500 p-6"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                  <div>
+                    <p className="text-sm text-gray-600 font-semibold">
+                      Mã đơn hàng
+                    </p>
+                    <p className="text-2xl font-bold text-gray-800">
+                      #{o.id?.slice(-6) || o.id}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 font-semibold">
+                      Khách hàng
+                    </p>
+                    <p className="text-lg font-semibold text-gray-800">
+                      {o.customerName ?? o.customer?.name ?? "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 font-semibold">
+                      Tổng tiền
+                    </p>
+                    <p className="text-xl font-bold text-orange-600">
+                      {(o.total ?? o.amount ?? 0).toLocaleString("vi-VN")}₫
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-600 font-semibold mb-2">
+                      Trạng thái
+                    </p>
+                    <div
+                      className="inline-block px-4 py-2 rounded-full text-sm font-bold text-white"
+                      style={{ backgroundColor: getStatusColor(o.status) }}
+                    >
+                      {o.status}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-200 pt-4">
+                  <p className="text-sm text-gray-600 font-semibold mb-2">
+                    Sản phẩm:
+                  </p>
+                  <p className="text-gray-700">
+                    {(o.items || [])
+                      .map((it) => it.title || it.name)
+                      .join(", ") || "Không có sản phẩm"}
+                  </p>
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {STATUS.filter((s) => s !== "all").map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => changeStatus(o.id, s)}
+                      className={`px-4 py-2 rounded-lg font-semibold transition-all duration-300 text-sm ${
+                        o.status === s
+                          ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md"
+                          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="mt-3 space-x-2">
-                {STATUS.filter((s) => s !== "all").map((s) => (
+            ))
+          )}
+        </div>
+
+        {/* Pagination */}
+        <div className="mt-8 bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-4 py-2 rounded-lg font-bold bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                ← Trang trước
+              </button>
+
+              <div className="flex gap-1 flex-wrap">
+                {Array.from({ length: totalPages }).map((_, i) => (
                   <button
-                    key={s}
-                    onClick={() => changeStatus(o.id, s)}
-                    className="text-sm px-2 py-1 border rounded"
+                    key={i}
+                    onClick={() => setPage(i + 1)}
+                    className={`px-3 py-2 rounded-lg font-bold transition-all ${
+                      page === i + 1
+                        ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
                   >
-                    {s}
+                    {i + 1}
                   </button>
                 ))}
               </div>
+
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="px-4 py-2 rounded-lg font-bold bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                Trang sau →
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600 font-semibold">
+                Đi đến trang:
+              </span>
+              <input
+                value={pageInput}
+                onChange={(e) => {
+                  setPageInput(e.target.value);
+                  setPageError("");
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    const v = Number(pageInput);
+                    if (isNaN(v)) {
+                      setPageError("Vui lòng nhập số");
+                    } else if (v < 1 || v > totalPages) {
+                      setPageError(
+                        `Trang phải nằm trong khoảng 1-${totalPages}`
+                      );
+                    } else {
+                      setPage(v);
+                      setPageInput("");
+                      setPageError("");
+                    }
+                  }
+                }}
+                className={`w-20 border-2 p-2 rounded-lg text-center font-semibold ${
+                  pageError ? "border-red-500" : "border-gray-300"
+                } focus:outline-none focus:border-blue-500 transition`}
+                placeholder="..."
+              />
+              <span className="text-sm text-gray-600 font-semibold">
+                / {totalPages}
+              </span>
             </div>
           </div>
-        ))}
-      </div>
-
-      <div className="mt-4 flex flex-col items-center gap-3">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="px-3 py-1 border rounded"
-          >
-            Prev
-          </button>
-
-          <div className="flex gap-1">
-            {Array.from({ length: totalPages }).map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setPage(i + 1)}
-                className={`px-2 py-1 border rounded ${
-                  page === i + 1 ? "bg-slate-200" : ""
-                }`}
-              >
-                {i + 1}
-              </button>
-            ))}
-          </div>
-
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            className="px-3 py-1 border rounded"
-          >
-            Next
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div>Page</div>
-          <input
-            value={pageInput}
-            onChange={(e) => setPageInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                const v = Number(pageInput);
-                if (!isNaN(v) && v >= 1 && v <= totalPages) setPage(v);
-              }
-            }}
-            className="w-16 border p-1 rounded text-center"
-          />
-          <div>/ {totalPages}</div>
+          {pageError && (
+            <div className="text-red-600 text-sm font-bold mt-3">
+              {pageError}
+            </div>
+          )}
         </div>
       </div>
     </div>

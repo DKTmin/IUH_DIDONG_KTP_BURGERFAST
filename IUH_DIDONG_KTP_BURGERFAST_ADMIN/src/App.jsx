@@ -1,11 +1,10 @@
-import React from "react";
-import { Routes, Route, Link } from "react-router-dom";
-import Dashboard from "./pages/Dashboard";
-import Products from "./pages/Products";
-import Orders from "./pages/Orders";
-import Login from "./pages/Login";
+import { Link, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import Dashboard from "./pages/Dashboard";
+import Login from "./pages/Login";
+import Orders from "./pages/Orders";
+import Products from "./pages/Products";
 
 function Header() {
   const { user, signOut } = useAuth();
@@ -13,7 +12,7 @@ function Header() {
   return (
     <header className="bg-white shadow">
       <div className="max-w-7xl mx-auto py-4 px-6 flex items-center justify-between">
-        <h1 className="text-xl font-bold">BurgerFast Admin</h1>
+        <h1 className="text-2xl  font-bold ">BurgerFast Admin</h1>
         <nav className="space-x-4 flex items-center">
           <Link to="/" className="text-slate-600 hover:text-slate-900">
             Dashboard

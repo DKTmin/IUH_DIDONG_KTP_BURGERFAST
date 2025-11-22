@@ -1,12 +1,12 @@
 import {
   collection,
-  query,
-  onSnapshot,
-  getDocs,
-  updateDoc,
   doc,
-  where,
+  getDocs,
+  onSnapshot,
   orderBy,
+  query,
+  updateDoc,
+  where,
 } from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
 
@@ -40,6 +40,101 @@ export async function getRevenueStats(rangeStart, rangeEnd) {
     total += Number(t);
   });
   return { total };
+}
+
+/**
+ * Get revenue stats for paid orders only (status: "confirmed" or "delivered")
+ */
+export async function getRevenueStatsPaid(rangeStart, rangeEnd) {
+  const q = query(
+    ordersCol,
+    where("createdAt", ">=", rangeStart),
+    where("createdAt", "<=", rangeEnd)
+  );
+  const snap = await getDocs(q);
+  let total = 0;
+  snap.forEach((d) => {
+    const data = d.data();
+    // Only count confirmed or delivered orders
+    if (data.status === "confirmed" || data.status === "delivered") {
+      const t = data.total ?? data.amount ?? 0;
+      total += Number(t);
+    }
+  });
+  return { total };
+}
+
+/**
+ * Get revenue by category for paid orders
+ * Handles both old orders (without category field) and new orders (with category field)
+ */
+export async function getRevenueByCategoryPaid(rangeStart, rangeEnd) {
+  const q = query(
+    ordersCol,
+    where("createdAt", ">=", rangeStart),
+    where("createdAt", "<=", rangeEnd)
+  );
+  const snap = await getDocs(q);
+  const categories = {
+    burgers: 0,
+    drinks: 0,
+    combos: 0,
+    trending: 0,
+    veggie: 0,
+    spicy: 0,
+  };
+
+  // Pre-fetch all products to map item IDs to categories
+  const burgersCol = collection(db, "burgers");
+  const drinksCol = collection(db, "drinks");
+  const combosCol = collection(db, "combos");
+
+  const [burgersDocs, drinksDocs, combosDocs] = await Promise.all([
+    getDocs(burgersCol),
+    getDocs(drinksCol),
+    getDocs(combosCol),
+  ]);
+
+  // Create lookup maps for products
+  const productMap = {};
+
+  burgersDocs.forEach((doc) => {
+    const data = doc.data();
+    productMap[doc.id] = data.categoryId || "burgers";
+  });
+
+  drinksDocs.forEach((doc) => {
+    productMap[doc.id] = "drinks";
+  });
+
+  combosDocs.forEach((doc) => {
+    productMap[doc.id] = "combos";
+  });
+
+  snap.forEach((d) => {
+    const data = d.data();
+    // Only count confirmed or delivered orders
+    if (data.status !== "confirmed" && data.status !== "delivered") return;
+
+    const items = data.items || [];
+    items.forEach((item) => {
+      // Determine category from item.category (new orders) or lookup from productMap (old orders)
+      let category = item.category;
+
+      if (!category) {
+        // For old orders without category field, lookup from productMap
+        category = productMap[item.id] || "burgers";
+      }
+
+      if (categories.hasOwnProperty(category)) {
+        const price = item.selectedSizePrice || item.price || 0;
+        const qty = item.quantity || 1;
+        categories[category] += Number(price) * qty;
+      }
+    });
+  });
+
+  return categories;
 }
 
 export async function getRevenueSeries(days = 7) {

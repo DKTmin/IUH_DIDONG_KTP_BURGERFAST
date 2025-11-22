@@ -343,6 +343,7 @@ export interface OrderItem {
   selectedSize?: string;
   selectedSizePrice?: number;
   imageUrl?: string;
+  category?: string;
 }
 
 export interface Order {
@@ -351,12 +352,12 @@ export interface Order {
   items: OrderItem[];
   total: number;
   status:
-  | "pending"
-  | "confirmed"
-  | "preparing"
-  | "delivering"
-  | "delivered"
-  | "cancelled";
+    | "pending"
+    | "confirmed"
+    | "preparing"
+    | "delivering"
+    | "delivered"
+    | "cancelled";
   paymentMethod: "cash" | "momo";
   contactInfo: {
     name: string;

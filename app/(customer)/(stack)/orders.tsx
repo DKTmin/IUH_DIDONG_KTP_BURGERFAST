@@ -89,8 +89,10 @@ export default function OrdersScreen() {
         return "check-circle-outline";
       case "preparing":
         return "chef-hat";
+      case "delivering":
+        return "truck-delivery-outline";
       case "delivered":
-        return "home-check";
+        return "hamburger-check";
       case "cancelled":
         return "close-circle-outline";
       default:
@@ -446,7 +448,9 @@ export default function OrdersScreen() {
                             orderId: selectedOrder.id || "",
                             amount: selectedOrder.total,
                             recipientPhone: momoConfig.merchantPhone,
-                            note: `${t("orders.paymentNote")} ${selectedOrder.id}`,
+                            note: `${t("orders.paymentNote")} ${
+                              selectedOrder.id
+                            }`,
                             returnUrl,
                           });
                         } catch (e) {

@@ -206,59 +206,78 @@ export default function CartScreen() {
       await updateDoc(doc(db, "users", user.uid), { address: newAddresses });
       setAddresses(newAddresses);
       setContactInfo({ ...contactInfo, address: addr });
-      } catch (err) {
-        console.error("Error setting default address:", err);
-        Alert.alert(t("cart.alerts.setDefaultError"), t("cart.alerts.setDefaultErrorMessage"));
-      }
+    } catch (err) {
+      console.error("Error setting default address:", err);
+      Alert.alert(
+        t("cart.alerts.setDefaultError"),
+        t("cart.alerts.setDefaultErrorMessage")
+      );
+    }
   };
 
   // Delete address at index and persist; update contactInfo if necessary
   const handleDeleteAddress = async (index: number) => {
-    Alert.alert(t("cart.alerts.deleteAddress"), t("cart.alerts.deleteAddressMessage"), [
-      { text: t("common.cancel"), style: "cancel" },
-      {
-        text: t("cart.alerts.delete"),
-        style: "destructive",
-        onPress: async () => {
-          try {
-            const user = auth.currentUser;
-            if (!user) return;
+    Alert.alert(
+      t("cart.alerts.deleteAddress"),
+      t("cart.alerts.deleteAddressMessage"),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("cart.alerts.delete"),
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const user = auth.currentUser;
+              if (!user) return;
 
-            const newAddresses = addresses.filter((_, i) => i !== index);
-            await updateDoc(doc(db, "users", user.uid), {
-              address: newAddresses,
-            });
-            setAddresses(newAddresses);
-
-            // If the deleted address was currently selected in contactInfo, update to first or empty
-            if (contactInfo.address === addresses[index]) {
-              setContactInfo({
-                ...contactInfo,
-                address: newAddresses.length > 0 ? newAddresses[0] : "",
+              const newAddresses = addresses.filter((_, i) => i !== index);
+              await updateDoc(doc(db, "users", user.uid), {
+                address: newAddresses,
               });
+              setAddresses(newAddresses);
+
+              // If the deleted address was currently selected in contactInfo, update to first or empty
+              if (contactInfo.address === addresses[index]) {
+                setContactInfo({
+                  ...contactInfo,
+                  address: newAddresses.length > 0 ? newAddresses[0] : "",
+                });
+              }
+            } catch (err) {
+              console.error("Error deleting address:", err);
+              Alert.alert(
+                t("cart.alerts.deleteError"),
+                t("cart.alerts.deleteErrorMessage")
+              );
             }
-          } catch (err) {
-            console.error("Error deleting address:", err);
-            Alert.alert(t("cart.alerts.deleteError"), t("cart.alerts.deleteErrorMessage"));
-          }
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   const handleCheckout = async () => {
     if (cartItems.length === 0) {
-      Alert.alert(t("cart.alerts.emptyCart"), t("cart.alerts.emptyCartMessage"));
+      Alert.alert(
+        t("cart.alerts.emptyCart"),
+        t("cart.alerts.emptyCartMessage")
+      );
       return;
     }
 
     if (!contactInfo.address || contactInfo.address.trim() === "") {
-      Alert.alert(t("cart.alerts.errorAddress"), t("cart.alerts.errorAddressMessage"));
+      Alert.alert(
+        t("cart.alerts.errorAddress"),
+        t("cart.alerts.errorAddressMessage")
+      );
       return;
     }
 
     if (!paymentMethod) {
-      Alert.alert(t("cart.alerts.errorPayment"), t("cart.alerts.errorPaymentMessage"));
+      Alert.alert(
+        t("cart.alerts.errorPayment"),
+        t("cart.alerts.errorPaymentMessage")
+      );
       return;
     }
 
@@ -267,7 +286,10 @@ export default function CartScreen() {
     Alert.alert(
       t("cart.alerts.confirmOrder"),
       t("cart.alerts.confirmOrderMessage")
-        .replace("{method}", paymentMethod === "cash" ? t("orders.cash") : "Momo")
+        .replace(
+          "{method}",
+          paymentMethod === "cash" ? t("orders.cash") : "Momo"
+        )
         .replace("{amount}", totalPrice.toLocaleString("vi-VN")),
       [
         { text: t("common.cancel"), style: "cancel" },
@@ -278,7 +300,10 @@ export default function CartScreen() {
             try {
               const user = auth.currentUser;
               if (!user) {
-                Alert.alert(t("cart.alerts.loginError"), t("cart.alerts.loginErrorMessage"));
+                Alert.alert(
+                  t("cart.alerts.loginError"),
+                  t("cart.alerts.loginErrorMessage")
+                );
                 setIsProcessing(false);
                 return;
               }
@@ -292,6 +317,7 @@ export default function CartScreen() {
                 selectedSize: item.selectedSize,
                 selectedSizePrice: item.selectedSizePrice,
                 imageUrl: item.imageUrl || item.image || "",
+                category: item.category || item.categoryId || "burgers",
               }));
 
               // Create order object
@@ -346,11 +372,17 @@ export default function CartScreen() {
                   );
                 }
               } else {
-                Alert.alert(t("cart.alerts.orderError"), t("cart.alerts.orderErrorMessage"));
+                Alert.alert(
+                  t("cart.alerts.orderError"),
+                  t("cart.alerts.orderErrorMessage")
+                );
               }
             } catch (error) {
               console.error("Error creating order:", error);
-              Alert.alert(t("cart.alerts.createOrderError"), t("cart.alerts.createOrderErrorMessage"));
+              Alert.alert(
+                t("cart.alerts.createOrderError"),
+                t("cart.alerts.createOrderErrorMessage")
+              );
             } finally {
               setIsProcessing(false);
             }
@@ -637,7 +669,9 @@ export default function CartScreen() {
         {/* Suggested Products */}
         {suggestedProducts.length > 0 && (
           <View style={styles.suggestedSection}>
-            <Text style={styles.sectionTitle}>{t("cart.suggestedProducts")}</Text>
+            <Text style={styles.sectionTitle}>
+              {t("cart.suggestedProducts")}
+            </Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -916,7 +950,9 @@ function CartItemCard({ item, onQuantityChange, t }: any) {
       <View style={styles.cartItemInfo}>
         <Text style={styles.cartItemName}>{item.name}</Text>
         {item.selectedSize && (
-          <Text style={styles.cartItemSize}>{t("cart.sizeLabel")} {item.selectedSize}</Text>
+          <Text style={styles.cartItemSize}>
+            {t("cart.sizeLabel")} {item.selectedSize}
+          </Text>
         )}
         <Text style={styles.cartItemPrice}>
           {displayPrice.toLocaleString("vi-VN")} đ
@@ -993,7 +1029,12 @@ function SizeSelectionModal({ visible, product, onClose, onConfirm, t }: any) {
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>{t("cart.sizeModal.title").replace("{productName}", product?.name || "")}</Text>
+          <Text style={styles.modalTitle}>
+            {t("cart.sizeModal.title").replace(
+              "{productName}",
+              product?.name || ""
+            )}
+          </Text>
 
           <View style={styles.modalSizeOptions}>
             {product?.sizes?.map((size: any) => (
@@ -1027,7 +1068,9 @@ function SizeSelectionModal({ visible, product, onClose, onConfirm, t }: any) {
                 onClose();
               }}
             >
-              <Text style={styles.modalCancelBtnText}>{t("cart.sizeModal.cancel")}</Text>
+              <Text style={styles.modalCancelBtnText}>
+                {t("cart.sizeModal.cancel")}
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
@@ -1037,7 +1080,9 @@ function SizeSelectionModal({ visible, product, onClose, onConfirm, t }: any) {
               onPress={handleConfirm}
               disabled={!selectedSize}
             >
-              <Text style={styles.modalConfirmBtnText}>{t("cart.sizeModal.addToCart")}</Text>
+              <Text style={styles.modalConfirmBtnText}>
+                {t("cart.sizeModal.addToCart")}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
