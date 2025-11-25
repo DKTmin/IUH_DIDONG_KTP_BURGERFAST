@@ -1,8 +1,13 @@
 import { doc as docRef, getDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { db } from "../firebase/firebaseConfig";
+import {
+  getBurgers,
+  getCombos,
+  getDrinks,
+  getSideDishes,
+} from "../services/menuService";
 import { listenOrders, updateOrderStatus } from "../services/orderService";
-import { getBurgers, getDrinks, getCombos } from "../services/menuService";
 
 const STATUS = [
   "all",
@@ -49,7 +54,12 @@ export default function Orders() {
   const [pageError, setPageError] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [customerNameFilter, setCustomerNameFilter] = useState("");
-  const [products, setProducts] = useState({ burgers: [], drinks: [], combos: [] });
+  const [products, setProducts] = useState({
+    burgers: [],
+    drinks: [],
+    combos: [],
+    sideDishes: [],
+  });
   const [productFilter, setProductFilter] = useState("all");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -65,13 +75,19 @@ export default function Orders() {
     let cancelled = false;
     async function loadProducts() {
       try {
-        const [burgers, drinks, combos] = await Promise.all([
+        const [burgers, drinks, combos, sideDishes] = await Promise.all([
           getBurgers(),
           getDrinks(),
           getCombos(),
+          getSideDishes(),
         ]);
         if (!cancelled)
-          setProducts({ burgers: burgers || [], drinks: drinks || [], combos: combos || [] });
+          setProducts({
+            burgers: burgers || [],
+            drinks: drinks || [],
+            combos: combos || [],
+            sideDishes: sideDishes || [],
+          });
       } catch (_e) {
         // ignore
       }
@@ -155,7 +171,12 @@ export default function Orders() {
     if (productFilter && productFilter !== "all") {
       out = out.filter((o) => {
         const items = o.items || [];
-        return items.some((it) => it.id === productFilter || it.productId === productFilter || it.id === productFilter);
+        return items.some(
+          (it) =>
+            it.id === productFilter ||
+            it.productId === productFilter ||
+            it.id === productFilter
+        );
       });
     }
     if (fromDate) {
@@ -226,7 +247,9 @@ export default function Orders() {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Sản phẩm</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Sản phẩm
+              </label>
               <select
                 value={productFilter}
                 onChange={(e) => setProductFilter(e.target.value)}
@@ -242,6 +265,13 @@ export default function Orders() {
                 </optgroup>
                 <optgroup label="🥤 Drinks">
                   {products.drinks.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name || p.title || p.id}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="🍟 Side Dishes">
+                  {products.sideDishes.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name || p.title || p.id}
                     </option>

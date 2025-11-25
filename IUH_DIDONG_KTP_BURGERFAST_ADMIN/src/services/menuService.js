@@ -1,4 +1,10 @@
-import { collection, doc, getDocs, setDoc } from "firebase/firestore";
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  setDoc,
+} from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { db, storage } from "../firebase/firebaseConfig";
 
@@ -101,6 +107,49 @@ export async function getBurgers() {
 export async function getDrinks() {
   const snap = await getDocs(collection(db, "drinks"));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function addSideDish({ name, description, price, imageInput }) {
+  const idx = await getNextIndex("sideDishes");
+  const id = formatId("sideDishes", idx);
+  const { imageUrl } = await uploadImage("sideDishes", imageInput);
+  await setDoc(doc(db, "sideDishes", id), {
+    id,
+    name,
+    description,
+    imageUrl,
+    price: Number(price || 0),
+    isAvailable: true,
+    createdAt: new Date(),
+  });
+  return { docId: id, id };
+}
+
+export async function getSideDishes() {
+  const snap = await getDocs(collection(db, "sideDishes"));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function deleteProduct(collectionName, id) {
+  if (!collectionName || !id) return false;
+  try {
+    await deleteDoc(doc(db, collectionName, id));
+    return true;
+  } catch (e) {
+    console.error("deleteProduct error", e);
+    return false;
+  }
+}
+
+export async function updateProduct(collectionName, id, data) {
+  if (!collectionName || !id) return false;
+  try {
+    await setDoc(doc(db, collectionName, id), data, { merge: true });
+    return true;
+  } catch (e) {
+    console.error("updateProduct error", e);
+    return false;
+  }
 }
 
 export async function getCombos() {

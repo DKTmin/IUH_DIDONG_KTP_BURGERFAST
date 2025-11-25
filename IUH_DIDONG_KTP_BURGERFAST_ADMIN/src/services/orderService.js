@@ -26,7 +26,6 @@ export async function updateOrderStatus(orderId, status) {
 }
 
 export async function getRevenueStats(rangeStart, rangeEnd) {
-  // rangeStart and rangeEnd are JS Date objects
   const q = query(
     ordersCol,
     where("createdAt", ">=", rangeStart),
@@ -42,9 +41,6 @@ export async function getRevenueStats(rangeStart, rangeEnd) {
   return { total };
 }
 
-/**
- * Get revenue stats for paid orders only (status: "confirmed" or "delivered")
- */
 export async function getRevenueStatsPaid(rangeStart, rangeEnd) {
   const q = query(
     ordersCol,
@@ -55,7 +51,6 @@ export async function getRevenueStatsPaid(rangeStart, rangeEnd) {
   let total = 0;
   snap.forEach((d) => {
     const data = d.data();
-    // Only count confirmed or delivered orders
     if (data.status === "confirmed" || data.status === "delivered") {
       const t = data.total ?? data.amount ?? 0;
       total += Number(t);
@@ -64,10 +59,6 @@ export async function getRevenueStatsPaid(rangeStart, rangeEnd) {
   return { total };
 }
 
-/**
- * Get revenue by category for paid orders
- * Handles both old orders (without category field) and new orders (with category field)
- */
 export async function getRevenueByCategoryPaid(rangeStart, rangeEnd) {
   const q = query(
     ordersCol,
@@ -79,23 +70,25 @@ export async function getRevenueByCategoryPaid(rangeStart, rangeEnd) {
     burgers: 0,
     drinks: 0,
     combos: 0,
+    sideDishes: 0,
     trending: 0,
     veggie: 0,
     spicy: 0,
   };
 
-  // Pre-fetch all products to map item IDs to categories
   const burgersCol = collection(db, "burgers");
   const drinksCol = collection(db, "drinks");
   const combosCol = collection(db, "combos");
+  const sideDishesCol = collection(db, "sideDishes");
 
-  const [burgersDocs, drinksDocs, combosDocs] = await Promise.all([
-    getDocs(burgersCol),
-    getDocs(drinksCol),
-    getDocs(combosCol),
-  ]);
+  const [burgersDocs, drinksDocs, combosDocs, sideDishesDocs] =
+    await Promise.all([
+      getDocs(burgersCol),
+      getDocs(drinksCol),
+      getDocs(combosCol),
+      getDocs(sideDishesCol),
+    ]);
 
-  // Create lookup maps for products
   const productMap = {};
 
   burgersDocs.forEach((doc) => {
@@ -111,21 +104,18 @@ export async function getRevenueByCategoryPaid(rangeStart, rangeEnd) {
     productMap[doc.id] = "combos";
   });
 
+  sideDishesDocs.forEach((doc) => {
+    productMap[doc.id] = "sideDishes";
+  });
+
   snap.forEach((d) => {
     const data = d.data();
-    // Only count confirmed or delivered orders
     if (data.status !== "confirmed" && data.status !== "delivered") return;
 
     const items = data.items || [];
     items.forEach((item) => {
-      // Determine category from item.category (new orders) or lookup from productMap (old orders)
       let category = item.category;
-
-      if (!category) {
-        // For old orders without category field, lookup from productMap
-        category = productMap[item.id] || "burgers";
-      }
-
+      if (!category) category = productMap[item.id] || "burgers";
       if (categories.hasOwnProperty(category)) {
         const price = item.selectedSizePrice || item.price || 0;
         const qty = item.quantity || 1;
@@ -158,7 +148,6 @@ export async function getRevenueSeries(days = 7) {
   );
 
   const snap = await getDocs(q);
-  // initialize map of date -> total
   const map = {};
   for (let i = 0; i < days; i++) {
     const d = new Date(start);

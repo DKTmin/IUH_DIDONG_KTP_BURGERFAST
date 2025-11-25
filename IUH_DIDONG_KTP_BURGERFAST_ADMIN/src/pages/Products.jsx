@@ -3,8 +3,10 @@ import {
   addBurger,
   addCombo,
   addDrink,
+  addSideDish,
   getBurgers,
   getDrinks,
+  getSideDishes,
 } from "../services/menuService";
 
 export default function Products() {
@@ -42,14 +44,24 @@ export default function Products() {
 
   const [availableBurgers, setAvailableBurgers] = useState([]);
   const [availableDrinks, setAvailableDrinks] = useState([]);
+  const [availableSideDishes, setAvailableSideDishes] = useState([]);
   const [errors, setErrors] = useState({});
+
+  // side dish form states
+  const [sdName, setSdName] = useState("");
+  const [sdDesc, setSdDesc] = useState("");
+  const [sdPrice, setSdPrice] = useState("");
+  const [sdImageUrl, setSdImageUrl] = useState("");
+  const [sdImageFile, setSdImageFile] = useState(null);
 
   useEffect(() => {
     async function loadLists() {
       const b = await getBurgers();
       const d = await getDrinks();
+      const s = await getSideDishes();
       setAvailableBurgers(b);
       setAvailableDrinks(d);
+      setAvailableSideDishes(s);
     }
     loadLists();
   }, []);
@@ -101,10 +113,10 @@ export default function Products() {
       // refresh lists
       const b = await getBurgers();
       setAvailableBurgers(b);
-      alert("Burger added");
+      alert("Thêm Burger thành công");
     } catch (err) {
       console.error(err);
-      alert("Error adding burger");
+      alert("Lỗi khi thêm Burger");
     } finally {
       setLoading(false);
     }
@@ -146,10 +158,10 @@ export default function Products() {
       setErrors({});
       const d = await getDrinks();
       setAvailableDrinks(d);
-      alert("Drink added");
+      alert("Thêm Drink thành công");
     } catch (err) {
       console.error(err);
-      alert("Error adding drink");
+      alert("Lỗi khi thêm Drink");
     } finally {
       setLoading(false);
     }
@@ -198,10 +210,10 @@ export default function Products() {
       setCImageUrl("");
       setCImageFile(null);
       setErrors({});
-      alert("Combo added");
+      alert("Thêm Combo thành công");
     } catch (err) {
       console.error(err);
-      alert("Error adding combo");
+      alert("Lỗi khi thêm Combo");
     } finally {
       setLoading(false);
     }
@@ -217,9 +229,6 @@ export default function Products() {
               Thêm sản phẩm theo phân loại
             </h1>
           </div>
-          <p className="text-gray-600 text-lg">
-            Quản lý và thêm sản phẩm cho từng danh mục
-          </p>
         </div>
 
         {/* Tab Navigation */}
@@ -253,6 +262,16 @@ export default function Products() {
             }`}
           >
             Combos
+          </button>
+          <button
+            onClick={() => setTab("sideDishes")}
+            className={`px-6 py-3 rounded-xl font-bold text-lg transition-all duration-300 transform ${
+              tab === "sideDishes"
+                ? "bg-orange-400 text-white shadow-lg scale-105"
+                : "bg-white text-gray-700 border-2 border-orange-300 hover:border-orange-500 hover:bg-orange-50"
+            }`}
+          >
+            Side Dishes
           </button>
         </div>
 
@@ -359,10 +378,123 @@ export default function Products() {
                 </div>
                 <div className="md:col-span-2">
                   <button
-                    className="bg-yellow-500 text-white px-4 py-2 rounded"
+                    className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded"
                     disabled={loading}
                   >
-                    {loading ? "Adding..." : "Thêm Burger"}
+                    {loading ? "Đang thêm..." : "Thêm Burger"}
+                  </button>
+                </div>
+              </div>
+            </form>
+          )}
+          {tab === "sideDishes" && (
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                await (async function () {
+                  // reuse handleAddSideDish logic inline to avoid adding new function reference
+                  const formErrors = {};
+                  if (!sdName.trim())
+                    formErrors.sdName = "Tên món kèm không được để trống";
+                  if (!sdDesc.trim())
+                    formErrors.sdDesc = "Mô tả không được để trống";
+                  if (!sdPrice || Number(sdPrice) <= 0)
+                    formErrors.sdPrice = "Giá phải lớn hơn 0";
+                  if (Object.keys(formErrors).length > 0) {
+                    setErrors(formErrors);
+                    alert("Vui lòng điền đầy đủ thông tin");
+                    return;
+                  }
+                  setLoading(true);
+                  try {
+                    const imageInput =
+                      sdImageFile || (sdImageUrl ? sdImageUrl : null);
+                    await addSideDish({
+                      name: sdName,
+                      description: sdDesc,
+                      price: sdPrice,
+                      imageInput,
+                    });
+                    setSdName("");
+                    setSdDesc("");
+                    setSdPrice("");
+                    setSdImageUrl("");
+                    setSdImageFile(null);
+                    setErrors({});
+                    const s = await getSideDishes();
+                    setAvailableSideDishes(s);
+                    alert("Thêm Side Dishes thành công");
+                  } catch (err) {
+                    console.error(err);
+                    alert("Lỗi khi thêm Side Dishes");
+                  } finally {
+                    setLoading(false);
+                  }
+                })();
+              }}
+              className="space-y-4"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm">Name</label>
+                  <input
+                    value={sdName}
+                    onChange={(e) => setSdName(e.target.value)}
+                    className={`w-full border p-2 rounded mt-1 ${
+                      errors.sdName ? "border-red-500" : ""
+                    }`}
+                  />
+                  {errors.sdName && (
+                    <span className="text-red-500 text-xs">
+                      {errors.sdName}
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <label className="text-sm">Price</label>
+                  <input
+                    value={sdPrice}
+                    onChange={(e) => setSdPrice(e.target.value)}
+                    className={`w-full border p-2 rounded mt-1 ${
+                      errors.sdPrice ? "border-red-500" : ""
+                    }`}
+                  />
+                  {errors.sdPrice && (
+                    <span className="text-red-500 text-xs">
+                      {errors.sdPrice}
+                    </span>
+                  )}
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-sm">Image URL</label>
+                  <input
+                    value={sdImageUrl}
+                    onChange={(e) => setSdImageUrl(e.target.value)}
+                    placeholder="Paste image URL"
+                    className="w-full border p-2 rounded mt-1"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-sm">Description</label>
+                  <textarea
+                    value={sdDesc}
+                    onChange={(e) => setSdDesc(e.target.value)}
+                    className={`w-full border p-2 rounded mt-1 ${
+                      errors.sdDesc ? "border-red-500" : ""
+                    }`}
+                  />
+                  {errors.sdDesc && (
+                    <span className="text-red-500 text-xs">
+                      {errors.sdDesc}
+                    </span>
+                  )}
+                </div>
+                <div className="md:col-span-2">
+                  <button
+                    className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded"
+                    disabled={loading}
+                  >
+                    {loading ? "Đang thêm..." : "Thêm Side Dishes"}
                   </button>
                 </div>
               </div>
@@ -440,10 +572,10 @@ export default function Products() {
                 </div>
                 <div className="md:col-span-2">
                   <button
-                    className="bg-yellow-500 text-white px-4 py-2 rounded"
+                    className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded"
                     disabled={loading}
                   >
-                    {loading ? "Adding..." : "Thêm Drink"}
+                    {loading ? "Đang thêm..." : "Thêm Drink"}
                   </button>
                 </div>
               </div>
@@ -545,6 +677,24 @@ export default function Products() {
                         ))}
                       </div>
                     </div>
+                    {/* Side Dishes Section */}
+                    <div className="mt-4">
+                      <h4 className="text-sm font-bold text-amber-600 mb-2">
+                        🍟 Side Dishes
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pl-3 border-l-4 border-amber-300">
+                        {availableSideDishes.map((s) => (
+                          <label key={s.id} className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={cItems.find((i) => i._id === s.id)}
+                              onChange={() => toggleComboItem(s)}
+                            />
+                            <span>{s.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -564,10 +714,10 @@ export default function Products() {
 
                 <div className="md:col-span-2">
                   <button
-                    className="bg-yellow-500 text-white px-4 py-2 rounded"
+                    className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded"
                     disabled={loading}
                   >
-                    {loading ? "Adding..." : "Thêm Combo"}
+                    {loading ? "Đang thêm..." : "Thêm Combo"}
                   </button>
                 </div>
               </div>

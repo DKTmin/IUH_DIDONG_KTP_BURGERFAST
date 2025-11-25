@@ -18,7 +18,11 @@ import {
 import { auth } from "../../config/firebaseConfig";
 import momoConfig from "../../config/momoConfig";
 import useTranslation from "../../hooks/useTranslation";
-import { getOrdersByUser, Order } from "../../services/firebaseService";
+import {
+  getOrdersByUser,
+  Order,
+  updateOrder,
+} from "../../services/firebaseService";
 import { initiateMomoPayment } from "../../services/momoService";
 
 export default function OrdersScreen() {
@@ -468,6 +472,74 @@ export default function OrdersScreen() {
                       </Text>
                     </TouchableOpacity>
                   )}
+
+                {/* Cancel order button - only enabled for pending, confirmed, preparing */}
+                <TouchableOpacity
+                  style={[
+                    styles.actionButton,
+                    {
+                      backgroundColor: [
+                        "pending",
+                        "confirmed",
+                        "preparing",
+                      ].includes(selectedOrder.status)
+                        ? "#f44336"
+                        : "#ccc",
+                      marginBottom: 8,
+                      opacity: ["pending", "confirmed", "preparing"].includes(
+                        selectedOrder.status
+                      )
+                        ? 1
+                        : 0.6,
+                    },
+                  ]}
+                  disabled={
+                    !["pending", "confirmed", "preparing"].includes(
+                      selectedOrder.status
+                    )
+                  }
+                  onPress={async () => {
+                    Alert.alert(
+                      t("Hủy đơn") || t("orders.cancelConfirmTitle"),
+                      t("Bạn có chắc muốn hủy đơn này?") ||
+                        t("orders.cancelConfirmMessage"),
+                      [
+                        {
+                          text: t("Hủy") || t("common.cancel"),
+                          style: "cancel",
+                        },
+                        {
+                          text: t("common.ok") || t("OK"),
+                          onPress: async () => {
+                            try {
+                              await updateOrder(selectedOrder.id || "", {
+                                status: "cancelled",
+                              });
+                              setDetailModalVisible(false);
+                              fetchOrders();
+                            } catch (e) {
+                              console.error(e);
+                              Alert.alert(
+                                t("orders.error"),
+                                t("orders.errorUpdatingStatus") ||
+                                  t("Không thể cập nhật trạng thái")
+                              );
+                            }
+                          },
+                        },
+                      ]
+                    );
+                  }}
+                >
+                  <Ionicons
+                    name="close-circle-outline"
+                    size={18}
+                    color="#fff"
+                  />
+                  <Text style={styles.actionButtonText}>
+                    {t("Hủy đơn hàng") || t("orders.cancelOrder")}
+                  </Text>
+                </TouchableOpacity>
 
                 <TouchableOpacity
                   style={styles.actionButton}
