@@ -1,5 +1,10 @@
 import { useCart } from "@/app/context/CartContext";
-import { Category, Product as FirebaseProduct, getCategories, getProducts } from "@/app/services/firebaseService";
+import {
+  Category,
+  Product as FirebaseProduct,
+  getCategories,
+  getProducts,
+} from "@/app/services/firebaseService";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { onAuthStateChanged } from "firebase/auth";
@@ -17,6 +22,7 @@ import {
 } from "react-native";
 import { auth } from "../../config/firebaseConfig";
 import useTranslation from "../../hooks/useTranslation";
+// Removed unused imports for FloatingCart and ChatAssistant
 
 export default function HomeScreen() {
   // no local user state needed here; auth listener will redirect if not logged in
@@ -24,7 +30,9 @@ export default function HomeScreen() {
   const [products, setProducts] = useState<FirebaseProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [sizeModalVisible, setSizeModalVisible] = useState(false);
-  const [selectedProductForSize, setSelectedProductForSize] = useState<FirebaseProduct | null>(null);
+  const [selectedProductForSize, setSelectedProductForSize] =
+    useState<FirebaseProduct | null>(null);
+  // Removed unused cartActive state
   const { addToCart } = useCart();
   const router = useRouter();
   const { t } = useTranslation();
@@ -40,7 +48,10 @@ export default function HomeScreen() {
     const loadData = async () => {
       setLoading(true);
       try {
-        const [cats, prods] = await Promise.all([getCategories(), getProducts()]);
+        const [cats, prods] = await Promise.all([
+          getCategories(),
+          getProducts(),
+        ]);
         setCategories(cats);
         setProducts(prods);
       } catch (error) {
@@ -53,7 +64,11 @@ export default function HomeScreen() {
     loadData();
   }, []);
 
-
+  // Add to cart logic: set cartActive true for Chat icon position
+  const handleAddToCart = (item: FirebaseProduct) => {
+    addToCart(item, 1);
+    // Removed setCartActive logic
+  };
 
   if (loading)
     return (
@@ -63,151 +78,191 @@ export default function HomeScreen() {
     );
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Logo */}
-      <View style={styles.header}>
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <Image
-            source={require("../../image/burgerPhoMai-Photoroom.png")}
-            style={styles.logo}
-          />
-          <Text style={styles.brandName}>BURGERFAST</Text>
+    <>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        {/* Logo */}
+        <View style={styles.header}>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <Image
+              source={require("../../image/burgerPhoMai-Photoroom.png")}
+              style={styles.logo}
+            />
+            <Text style={styles.brandName}>BURGERFAST</Text>
+          </View>
+          <TouchableOpacity>
+            <Ionicons name="notifications-outline" size={26} color="#333" />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity>
-          <Ionicons name="notifications-outline" size={26} color="#333" />
-        </TouchableOpacity>
-      </View>
 
-      {/* Vị trí */}
+        {/* Vị trí */}
 
-
-      {/* Mục bạn sẽ thích */}
-      <Text style={styles.sectionTitle}>{t("home.youWillLike")}</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {products
-          .filter((p) => p.category === "burgers")
-          .slice(0, 5)
-          .map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              style={styles.suggestCard}
-              onPress={() =>
-                router.push({ pathname: "/(stack)/product-detail" as any, params: { productId: item.id, collection: "products" } })
-              }
-            >
-              <Image source={{ uri: item.imageUrl || "" }} style={styles.suggestImage} />
-              <Text style={styles.suggestName}>{item.name}</Text>
-              <Text style={styles.suggestPrice}>
-                {/* Use small size price if available, otherwise fallback to product.price */}
-                {(() => {
-                  const smallPrice = item.sizes?.find((s) => s.key === "small")?.price;
-                  const display = typeof smallPrice === "number" ? smallPrice : item.price || 0;
-                  return `${t("home.from")} ${display.toLocaleString("vi-VN")}₫`;
-                })()}
-              </Text>
-
+        {/* Mục bạn sẽ thích */}
+        <Text style={styles.sectionTitle}>{t("home.youWillLike")}</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {products
+            .filter((p) => p.category === "burgers")
+            .slice(0, 5)
+            .map((item) => (
               <TouchableOpacity
-                style={styles.addBtn}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  // If product has sizes, open size selection modal, otherwise add directly
-                  if (item.sizes && item.sizes.length > 0) {
-                    setSelectedProductForSize(item);
-                    setSizeModalVisible(true);
-                  } else {
-                    addToCart(item, 1);
-                  }
-                }}
+                key={item.id}
+                style={styles.suggestCard}
+                onPress={() =>
+                  router.push({
+                    pathname: "/(stack)/product-detail" as any,
+                    params: { productId: item.id, collection: "products" },
+                  })
+                }
               >
-                <Ionicons name="add" size={20} color="#fff" />
+                <Image
+                  source={{ uri: item.imageUrl || "" }}
+                  style={styles.suggestImage}
+                />
+                <Text style={styles.suggestName}>{item.name}</Text>
+                <Text style={styles.suggestPrice}>
+                  {/* Use small size price if available, otherwise fallback to product.price */}
+                  {(() => {
+                    const smallPrice = item.sizes?.find(
+                      (s) => s.key === "small"
+                    )?.price;
+                    const display =
+                      typeof smallPrice === "number"
+                        ? smallPrice
+                        : item.price || 0;
+                    return `${t("home.from")} ${display.toLocaleString(
+                      "vi-VN"
+                    )}₫`;
+                  })()}
+                </Text>
+
+                <TouchableOpacity
+                  style={styles.addBtn}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    // If product has sizes, open size selection modal, otherwise add directly
+                    if (item.sizes && item.sizes.length > 0) {
+                      setSelectedProductForSize(item);
+                      setSizeModalVisible(true);
+                    } else {
+                      handleAddToCart(item);
+                    }
+                  }}
+                >
+                  <Ionicons name="add" size={20} color="#fff" />
+                </TouchableOpacity>
               </TouchableOpacity>
+            ))}
+        </ScrollView>
+
+        {/* Menu */}
+        {/* Menu: categories + products */}
+        <View style={styles.menuHeader}>
+          <Text style={styles.sectionTitle}>{t("home.menu")}</Text>
+          <TouchableOpacity
+            onPress={() => router.push({ pathname: "/(tabs)/menu" as any })}
+          >
+            <Text style={{ color: "#FFC107", fontWeight: "500" }}>
+              {t("home.seeMore")}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Category Tabs */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ marginTop: 6, marginBottom: 8 }}
+        >
+          {categories.map((cat) => (
+            <TouchableOpacity
+              key={cat.id}
+              style={[styles.categoryTab, styles.categoryTabActive]}
+              onPress={() => {
+                // Navigate to menu and open the selected category
+                router.push({
+                  pathname: "/(tabs)/menu" as any,
+                  params: { categoryId: cat.id },
+                });
+              }}
+            >
+              <Text style={styles.categoryIcon}>{cat.icon}</Text>
+              <Text style={[styles.categoryText, styles.categoryTextActive]}>
+                {cat.name}
+              </Text>
             </TouchableOpacity>
           ))}
-      </ScrollView>
+        </ScrollView>
 
-      {/* Menu */}
-      {/* Menu: categories + products */}
-      <View style={styles.menuHeader}>
-        <Text style={styles.sectionTitle}>{t("home.menu")}</Text>
-        <TouchableOpacity onPress={() => router.push({ pathname: "/(tabs)/menu" as any })}>
-          <Text style={{ color: "#FFC107", fontWeight: "500" }}>{t("home.seeMore")}</Text>
+        {/* Các mục tiện ích */}
+        <TouchableOpacity
+          style={styles.optionBox}
+          onPress={() => router.push({ pathname: "/(stack)/orders" as any })}
+        >
+          <Ionicons name="bag-outline" size={22} color="#FFC107" />
+          <View>
+            <Text style={styles.optionTitle}>{t("home.trackOrders")}</Text>
+            <Text style={styles.optionDesc}>{t("home.trackOrdersDesc")}</Text>
+          </View>
         </TouchableOpacity>
-      </View>
 
-      {/* Category Tabs */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 6, marginBottom: 8 }}>
-        {categories.map((cat) => (
-          <TouchableOpacity
-            key={cat.id}
-            style={[styles.categoryTab, styles.categoryTabActive]}
-            onPress={() => {
-              // Navigate to menu and open the selected category
-              router.push({ pathname: "/(tabs)/menu" as any, params: { categoryId: cat.id } });
-            }}
-          >
-            <Text style={styles.categoryIcon}>{cat.icon}</Text>
-            <Text style={[styles.categoryText, styles.categoryTextActive]}>{cat.name}</Text>
-          </TouchableOpacity>
-        ))}
+        <TouchableOpacity
+          style={styles.optionBox}
+          onPress={() => router.push({ pathname: "/(stack)/stores" as any })}
+        >
+          <Ionicons name="storefront-outline" size={22} color="#FFC107" />
+          <View>
+            <Text style={styles.optionTitle}>{t("home.ourStores")}</Text>
+          </View>
+        </TouchableOpacity>
+
+        <View style={styles.divider} />
+
+        <Text style={styles.sectionTitle}>{t("home.connectWithUs")}</Text>
+
+        <TouchableOpacity style={styles.optionBox}>
+          <Ionicons name="call-outline" size={22} color="#FFC107" />
+          <View>
+            <Text style={styles.optionTitle}>{t("home.needHelp")}</Text>
+            <Text style={styles.optionDesc}>{t("home.helpPhone")}</Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.optionBox}
+          onPress={() => router.push({ pathname: "/(stack)/terms" as any })}
+        >
+          <Ionicons name="document-text-outline" size={22} color="#FFC107" />
+          <View>
+            <Text style={styles.optionTitle}>
+              {t("common.termsAndConditions")}
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Logout */}
+
+        {/* Size Selection Modal for suggested items */}
+        <SizeSelectionModal
+          visible={sizeModalVisible}
+          product={selectedProductForSize}
+          onClose={() => {
+            setSizeModalVisible(false);
+            setSelectedProductForSize(null);
+          }}
+          onConfirm={(
+            product: any,
+            qty: number,
+            sizeName: string,
+            sizePrice: number
+          ) => {
+            addToCart(product, qty, sizeName, sizePrice);
+          }}
+          t={t}
+        />
       </ScrollView>
-
-
-
-      {/* Các mục tiện ích */}
-      <TouchableOpacity style={styles.optionBox} onPress={() => router.push({ pathname: "/(stack)/orders" as any })}>
-        <Ionicons name="bag-outline" size={22} color="#FFC107" />
-        <View>
-          <Text style={styles.optionTitle}>{t("home.trackOrders")}</Text>
-          <Text style={styles.optionDesc}>{t("home.trackOrdersDesc")}</Text>
-        </View>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.optionBox} onPress={() => router.push({ pathname: "/(stack)/stores" as any })}>
-        <Ionicons name="storefront-outline" size={22} color="#FFC107" />
-        <View>
-          <Text style={styles.optionTitle}>{t("home.ourStores")}</Text>
-        </View>
-      </TouchableOpacity>
-
-      <View style={styles.divider} />
-
-      <Text style={styles.sectionTitle}>{t("home.connectWithUs")}</Text>
-
-      <TouchableOpacity style={styles.optionBox}>
-        <Ionicons name="call-outline" size={22} color="#FFC107" />
-        <View>
-          <Text style={styles.optionTitle}>{t("home.needHelp")}</Text>
-          <Text style={styles.optionDesc}>{t("home.helpPhone")}</Text>
-        </View>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.optionBox} onPress={() => router.push({ pathname: "/(stack)/terms" as any })}>
-        <Ionicons name="document-text-outline" size={22} color="#FFC107" />
-        <View>
-          <Text style={styles.optionTitle}>{t("common.termsAndConditions")}</Text>
-        </View>
-      </TouchableOpacity>
-
-      {/* Logout */}
-
-      {/* Size Selection Modal for suggested items */}
-      <SizeSelectionModal
-        visible={sizeModalVisible}
-        product={selectedProductForSize}
-        onClose={() => {
-          setSizeModalVisible(false);
-          setSelectedProductForSize(null);
-        }}
-        onConfirm={(product: any, qty: number, sizeName: string, sizePrice: number) => {
-          addToCart(product, qty, sizeName, sizePrice);
-        }}
-        t={t}
-      />
-    </ScrollView>
+      {/* FloatingCart and ChatAssistant icons removed; now rendered globally in _layout.tsx */}
+    </>
   );
 }
-
-
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff", paddingHorizontal: 16 },
@@ -259,7 +314,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  menuRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 10 },
+  menuRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 10,
+  },
   menuCard: {
     width: "48%",
     borderRadius: 12,
@@ -306,9 +365,21 @@ const styles = StyleSheet.create({
   productInfo: { flex: 1, padding: 12, justifyContent: "space-between" },
   productName: { fontSize: 16, fontWeight: "bold", color: "#333" },
   productDescription: { fontSize: 13, color: "#666", marginTop: 4 },
-  productFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 8 },
+  productFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 8,
+  },
   productPrice: { fontSize: 16, fontWeight: "bold", color: "#FFC107" },
-  addButton: { width: 32, height: 32, borderRadius: 16, backgroundColor: "#FFC107", justifyContent: "center", alignItems: "center" },
+  addButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#FFC107",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   addButtonText: { color: "#fff", fontSize: 20, fontWeight: "bold" },
 
   optionBox: {
@@ -432,7 +503,12 @@ function SizeSelectionModal({ visible, product, onClose, onConfirm, t }: any) {
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>{t("home.sizeModal.title").replace("{productName}", product?.name || "")}</Text>
+          <Text style={styles.modalTitle}>
+            {t("home.sizeModal.title").replace(
+              "{productName}",
+              product?.name || ""
+            )}
+          </Text>
 
           <View style={styles.modalSizeOptions}>
             {product?.sizes?.map((size: any) => (
@@ -440,14 +516,16 @@ function SizeSelectionModal({ visible, product, onClose, onConfirm, t }: any) {
                 key={size.key}
                 style={[
                   styles.modalSizeButton,
-                  selectedSize?.key === size.key && styles.modalSizeButtonActive,
+                  selectedSize?.key === size.key &&
+                    styles.modalSizeButtonActive,
                 ]}
                 onPress={() => setSelectedSize(size)}
               >
                 <Text
                   style={[
                     styles.modalSizeButtonText,
-                    selectedSize?.key === size.key && styles.modalSizeButtonTextActive,
+                    selectedSize?.key === size.key &&
+                      styles.modalSizeButtonTextActive,
                   ]}
                 >
                   {size.name} - {size.price.toLocaleString("vi-VN")} đ
@@ -458,7 +536,9 @@ function SizeSelectionModal({ visible, product, onClose, onConfirm, t }: any) {
 
           <View style={styles.modalButtons}>
             <TouchableOpacity style={styles.modalCancelBtn} onPress={onClose}>
-              <Text style={styles.modalCancelBtnText}>{t("home.sizeModal.cancel")}</Text>
+              <Text style={styles.modalCancelBtnText}>
+                {t("home.sizeModal.cancel")}
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
@@ -468,7 +548,9 @@ function SizeSelectionModal({ visible, product, onClose, onConfirm, t }: any) {
               onPress={handleConfirm}
               disabled={!selectedSize}
             >
-              <Text style={styles.modalConfirmBtnText}>{t("home.sizeModal.addToCart")}</Text>
+              <Text style={styles.modalConfirmBtnText}>
+                {t("home.sizeModal.addToCart")}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>

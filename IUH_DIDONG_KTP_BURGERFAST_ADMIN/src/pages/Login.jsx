@@ -1,6 +1,6 @@
-import React, { useState } from "react";
-import { useAuth } from "../contexts/AuthContext";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -25,43 +25,80 @@ export default function Login() {
   }
 
   return (
-    <div className="max-w-md mx-auto mt-20 bg-white p-6 rounded shadow">
-      <h2 className="text-xl font-semibold mb-4">Admin Sign In</h2>
-      {error && <div className="mb-3 text-red-600">{error}</div>}
-
-      <form onSubmit={handleSubmit} className="space-y-3">
-        <div>
-          <label className="block text-sm text-slate-600">Email</label>
-          <input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full border p-2 rounded mt-1"
-          />
+    <div className="min-h-screen  flex items-center justify-center p-3">
+      <div className="w-full max-w-md">
+        {/* Logo Section */}
+        <div className="flex items-center justify-center text-center mb-8 ">
+          <div className="text-6xl mb-4 drop-shadow-lg">🍔</div>
+          <h1 className="text-4xl font-bold bg-yellow-400 bg-clip-text text-transparent mb-2">
+            BurgerFast
+          </h1>
         </div>
 
-        <div>
-          <label className="block text-sm text-slate-600">Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full border p-2 rounded mt-1"
-          />
-        </div>
+        {/* Login Card */}
+        <div className="bg-white rounded-3xl shadow-2xl border-2  p-8">
+          <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">
+            Đăng nhập Admin
+          </h2>
 
-        <div className="flex items-center justify-between">
-          <button
-            className="bg-blue-600 text-white px-4 py-2 rounded"
-            disabled={loading}
-          >
-            {loading ? "Signing..." : "Sign in"}
-          </button>
-        </div>
-      </form>
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border-2 border-red-300 rounded-lg flex items-center gap-3">
+              <div className="text-2xl">⚠️</div>
+              <p className="text-red-700 font-semibold">{error}</p>
+            </div>
+          )}
 
-      <p className="text-sm text-slate-500 mt-4">
-        Note: only users present in `admins` collection can access admin panel.
-      </p>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">
+                Địa chỉ Email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin@burgerfast.com"
+                className="w-full border-2 border-gray-300 p-4 rounded-xl text-lg focus:border-yellow-500 focus:outline-none transition duration-300"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">
+                Mật khẩu
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full border-2 border-gray-300 p-4 rounded-xl text-lg focus:border-yellow-500 focus:outline-none transition duration-300"
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              className={`w-full py-4 px-6 rounded-xl font-bold text-lg text-white transition-all duration-300 transform ${
+                loading
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-yellow-400 hover:shadow-lg hover:scale-105 active:scale-95"
+              }`}
+              disabled={loading}
+            >
+              {loading ? "Đang đăng nhập..." : "Đăng nhập"}
+            </button>
+          </form>
+
+          {/* Info Message */}
+          <div className="mt-8 p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
+            <p className="text-sm text-blue-700 text-center font-semibold">
+              Chỉ những người dùng trong danh sách admins mới có thể truy cập
+              trang quản lý này.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

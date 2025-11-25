@@ -1,6 +1,12 @@
 import { useRouter } from "expo-router";
 import React from "react";
-import { Animated, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  Animated,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useCart } from "../context/CartContext";
 
 export default function FloatingCart() {
@@ -21,10 +27,26 @@ export default function FloatingCart() {
     if (totalItems > 0) {
       const runShake = () => {
         const seq = Animated.sequence([
-          Animated.timing(shake, { toValue: 1, duration: 60, useNativeDriver: true }),
-          Animated.timing(shake, { toValue: -1, duration: 60, useNativeDriver: true }),
-          Animated.timing(shake, { toValue: 1, duration: 60, useNativeDriver: true }),
-          Animated.timing(shake, { toValue: 0, duration: 60, useNativeDriver: true }),
+          Animated.timing(shake, {
+            toValue: 1,
+            duration: 60,
+            useNativeDriver: true,
+          }),
+          Animated.timing(shake, {
+            toValue: -1,
+            duration: 60,
+            useNativeDriver: true,
+          }),
+          Animated.timing(shake, {
+            toValue: 1,
+            duration: 60,
+            useNativeDriver: true,
+          }),
+          Animated.timing(shake, {
+            toValue: 0,
+            duration: 60,
+            useNativeDriver: true,
+          }),
         ]);
         seq.start();
       };
@@ -64,9 +86,9 @@ export default function FloatingCart() {
 const styles = StyleSheet.create({
   container: {
     position: "absolute",
-    bottom: 80,
+    bottom: 150,
     right: 20,
-    zIndex: 999,
+    zIndex: 998, // lower than ChatAssistant
   },
   cartIcon: {
     width: 60,

@@ -108,6 +108,7 @@ function getIconForCategory(categoryId: string): string {
     veggie: "🥬",
     combos: "🎯",
     drinks: "🥤",
+    sideDishes: "🍟",
   };
   return iconMap[categoryId] || "🍽️";
 }
@@ -172,6 +173,22 @@ export async function getProducts(): Promise<Product[]> {
       } as Product);
     });
 
+    // Fetch side dishes
+    const sideRef = collection(db, "sideDishes");
+    const sideSnapshot = await getDocs(sideRef);
+    sideSnapshot.forEach((doc) => {
+      const data = doc.data();
+      allProducts.push({
+        id: doc.id,
+        name: data.name || "",
+        description: data.description || "",
+        price: data.price || 0,
+        imageUrl: data.imageUrl || data.image || "",
+        category: "sideDishes",
+        isAvailable: data.isAvailable !== false,
+      } as Product);
+    });
+
     return allProducts;
   } catch (error) {
     console.error("Error fetching products:", error);
@@ -196,6 +213,7 @@ export async function getProductsByCategory(
     if (categoryId === "burgers") collectionName = "burgers";
     if (categoryId === "drinks") collectionName = "drinks";
     if (categoryId === "combos") collectionName = "combos";
+    if (categoryId === "sideDishes") collectionName = "sideDishes";
     if (categoryId === "spicy" || categoryId === "veggie") {
       // These are sub-categories of burgers
       const burgersRef = collection(db, "burgers");
@@ -343,6 +361,7 @@ export interface OrderItem {
   selectedSize?: string;
   selectedSizePrice?: number;
   imageUrl?: string;
+  category?: string;
 }
 
 export interface Order {
@@ -351,12 +370,12 @@ export interface Order {
   items: OrderItem[];
   total: number;
   status:
-  | "pending"
-  | "confirmed"
-  | "preparing"
-  | "delivering"
-  | "delivered"
-  | "cancelled";
+    | "pending"
+    | "confirmed"
+    | "preparing"
+    | "delivering"
+    | "delivered"
+    | "cancelled";
   paymentMethod: "cash" | "momo";
   contactInfo: {
     name: string;

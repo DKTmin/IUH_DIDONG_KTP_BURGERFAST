@@ -1,26 +1,61 @@
-import React from "react";
-import { Routes, Route, Link } from "react-router-dom";
-import Dashboard from "./pages/Dashboard";
-import Products from "./pages/Products";
-import Orders from "./pages/Orders";
-import Login from "./pages/Login";
+import { useState } from "react";
+import { Link, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import Dashboard from "./pages/Dashboard";
+import DeleteProduct from "./pages/DeleteProduct";
+import Login from "./pages/Login";
+import Orders from "./pages/Orders";
+import Products from "./pages/Products";
+import UpdateProduct from "./pages/UpdateProduct";
 
 function Header() {
   const { user, signOut } = useAuth();
+  const [productsOpen, setProductsOpen] = useState(false);
 
   return (
     <header className="bg-white shadow">
       <div className="max-w-7xl mx-auto py-4 px-6 flex items-center justify-between">
-        <h1 className="text-xl font-bold">BurgerFast Admin</h1>
+        <h1 className="text-2xl  font-bold ">BurgerFast Admin</h1>
         <nav className="space-x-4 flex items-center">
           <Link to="/" className="text-slate-600 hover:text-slate-900">
             Dashboard
           </Link>
-          <Link to="/products" className="text-slate-600 hover:text-slate-900">
-            Products
-          </Link>
+          <div className="relative inline-block">
+            <button
+              onClick={() => setProductsOpen((s) => !s)}
+              className="cursor-pointer text-slate-600 hover:text-slate-900"
+            >
+              Products ▾
+            </button>
+            {productsOpen && (
+              <div className="absolute left-0 mt-2 w-64 bg-white border rounded shadow-lg z-50">
+                <div className="p-2">
+                  <Link
+                    to="/products"
+                    onClick={() => setProductsOpen(false)}
+                    className="block px-3 py-2 hover:bg-slate-100"
+                  >
+                    Thêm sản phẩm theo phân loại
+                  </Link>
+                  <Link
+                    to="/products/delete"
+                    onClick={() => setProductsOpen(false)}
+                    className="block px-3 py-2 hover:bg-slate-100"
+                  >
+                    Xóa sản phẩm theo phân loại
+                  </Link>
+                  <Link
+                    to="/products/update"
+                    onClick={() => setProductsOpen(false)}
+                    className="block px-3 py-2 hover:bg-slate-100"
+                  >
+                    Cập nhật sản phẩm theo phân loại
+                  </Link>
+                </div>
+              </div>
+            )}
+          </div>
           <Link to="/orders" className="text-slate-600 hover:text-slate-900">
             Orders
           </Link>
@@ -68,6 +103,22 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <Products />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/products/delete"
+              element={
+                <ProtectedRoute>
+                  <DeleteProduct />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/products/update"
+              element={
+                <ProtectedRoute>
+                  <UpdateProduct />
                 </ProtectedRoute>
               }
             />
