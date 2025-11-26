@@ -43,13 +43,34 @@ export default function CustomerAccount() {
     return t("customerAccount.tiers.new");
   };
 
-  const handleLogout = async () => {
-    await signOut(auth);
+  // show confirmation before signing out
+  const confirmLogout = () => {
     Alert.alert(
       t("customerAccount.alerts.logout.title"),
-      t("customerAccount.alerts.logout.message")
+      "Bạn có chắc chắn muốn đăng xuất?",
+      [
+        { text: t("common.cancel") || "Hủy", style: "cancel" },
+        {
+          text: t("customerAccount.logout") || "Đăng xuất",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await signOut(auth);
+              Alert.alert(
+                t("customerAccount.alerts.logout.title"),
+                t("customerAccount.alerts.logout.message")
+              );
+              router.replace("/auth/login");
+            } catch (error: any) {
+              Alert.alert(
+                t("common.error") || "Lỗi",
+                error?.message || String(error)
+              );
+            }
+          },
+        },
+      ]
     );
-    router.replace("/auth/login");
   };
 
   const handleDeleteAccount = async () => {
@@ -155,7 +176,7 @@ export default function CustomerAccount() {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
+        <TouchableOpacity style={styles.menuItem} onPress={confirmLogout}>
           <Ionicons name="log-out-outline" size={22} color="#333" />
           <Text style={[styles.menuText, { color: "#d9534f" }]}>
             {t("customerAccount.logout")}

@@ -7,6 +7,7 @@ import { doc, setDoc } from "firebase/firestore";
 import { useState } from "react";
 import {
   Alert,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -15,6 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import LanguageSelector from "../components/LanguageSelector";
 import { auth, db } from "../config/firebaseConfig";
 import useTranslation from "../hooks/useTranslation";
 
@@ -37,7 +39,8 @@ export default function RegisterScreen() {
 
   // State bắt lỗi
   const [errors, setErrors] = useState<any>({});
-  const { t } = useTranslation();
+  const { t, setLanguage, language } = useTranslation();
+  const [languageModalVisible, setLanguageModalVisible] = useState(false);
 
   // ✅ Kiểm tra lỗi
   const validateForm = () => {
@@ -231,6 +234,10 @@ export default function RegisterScreen() {
           style={[styles.input, { flex: 1, marginBottom: 0 }]}
           placeholder={t('register.labels.password')}
           secureTextEntry={!showPassword}
+          placeholderTextColor="#888"
+          selectionColor="#000"
+          autoCapitalize="none"
+          textContentType="password"
           value={password}
           onChangeText={setPassword}
         />
@@ -253,6 +260,9 @@ export default function RegisterScreen() {
           style={[styles.input, { flex: 1, marginBottom: 0 }]}
           placeholder={t('register.labels.confirm')}
           secureTextEntry={!showConfirmPassword}
+          placeholderTextColor="#888"
+          selectionColor="#000"
+          autoCapitalize="none"
           value={confirm}
           onChangeText={setConfirm}
         />
@@ -288,6 +298,33 @@ export default function RegisterScreen() {
         <Text style={styles.buttonText}>{t('register.registerButton')}</Text>
       </TouchableOpacity>
 
+      {/* Language selector (show flag + name) */}
+      <TouchableOpacity onPress={() => setLanguageModalVisible(true)} style={{ marginTop: 12, alignItems: 'center' }}>
+        <Text style={{ color: "#666", textAlign: "center" }}>
+          {(
+            {
+              vi: '🇻🇳',
+              en: '🇬🇧',
+              zh: '🇨🇳',
+            } as Record<string, string>
+          )[language || 'vi']}{' '}{t(`languages.${language || 'vi'}`)}
+        </Text>
+      </TouchableOpacity>
+
+      <Modal visible={languageModalVisible} transparent animationType="fade" onRequestClose={() => setLanguageModalVisible(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ width: 320, backgroundColor: '#fff', borderRadius: 8, padding: 12 }}>
+            <LanguageSelector
+              current={language}
+              onSelect={(l: 'vi' | 'en' | 'zh') => {
+                setLanguage?.(l);
+                setLanguageModalVisible(false);
+              }}
+              onClose={() => setLanguageModalVisible(false)}
+            />
+          </View>
+        </View>
+      </Modal>
       <View style={styles.loginRow}>
         <Text style={[styles.linkText, { color: "#000", marginTop: 0 }]}>
           {t('register.haveAccount').split('?')[0]}?
@@ -332,6 +369,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     marginBottom: 10,
+    color: '#000',
   },
   genderContainer: {
     flexDirection: "row",
@@ -353,6 +391,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 10,
+    position: 'relative',
   },
   checkboxRow: {
     flexDirection: "row",

@@ -89,9 +89,7 @@ export default function HomeScreen() {
             />
             <Text style={styles.brandName}>BURGERFAST</Text>
           </View>
-          <TouchableOpacity>
-            <Ionicons name="notifications-outline" size={26} color="#333" />
-          </TouchableOpacity>
+          {/* notifications icon removed per request */}
         </View>
 
         {/* Vị trí */}
@@ -517,7 +515,7 @@ function SizeSelectionModal({ visible, product, onClose, onConfirm, t }: any) {
                 style={[
                   styles.modalSizeButton,
                   selectedSize?.key === size.key &&
-                    styles.modalSizeButtonActive,
+                  styles.modalSizeButtonActive,
                 ]}
                 onPress={() => setSelectedSize(size)}
               >
@@ -525,7 +523,7 @@ function SizeSelectionModal({ visible, product, onClose, onConfirm, t }: any) {
                   style={[
                     styles.modalSizeButtonText,
                     selectedSize?.key === size.key &&
-                      styles.modalSizeButtonTextActive,
+                    styles.modalSizeButtonTextActive,
                   ]}
                 >
                   {size.name} - {size.price.toLocaleString("vi-VN")} đ

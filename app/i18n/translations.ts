@@ -4,6 +4,7 @@ const translations = {
       ok: "OK",
       cancel: "Hủy",
       close: "Đóng",
+      selectLanguage: "Chọn ngôn ngữ",
       termsAndConditions: "Điều khoản và Điều kiện",
     },
     login: {
@@ -76,12 +77,13 @@ const translations = {
       account: "Tài khoản",
       continueAsGuest: "Tiếp tục với tư cách khách",
     },
+
     customerAccount: {
       myProfile: "Hồ sơ của tôi",
       trackOrders: "Theo dõi đơn hàng",
       language: "Ngôn ngữ",
       tiers: {
-        new: "Thành viên Mới",
+        new: "Thành viên mới",
         bronze: "Thành viên Đồng",
         silver: "Thành viên Bạc",
         gold: "Thành viên Vàng",
@@ -97,17 +99,17 @@ const translations = {
         },
         delete: {
           title: "Xóa tài khoản",
-          message: "Bạn có chắc muốn xóa tài khoản này không?",
+          message: "Bạn có chắc muốn xóa tài khoản này?",
           cancel: "Hủy",
           confirm: "Xóa",
           successTitle: "Đã xóa",
           successMessage: "Tài khoản của bạn đã được xóa.",
           errorTitle: "Lỗi",
-          errorMessage:
-            "Không thể xóa tài khoản. Vui lòng đăng nhập lại và thử lại.",
+          errorMessage: "Không thể xóa tài khoản. Vui lòng đăng nhập lại và thử lại.",
         },
       },
     },
+
     changePassword: {
       title: "Đổi mật khẩu",
       currentPlaceholder: "Mật khẩu hiện tại",
@@ -368,45 +370,14 @@ const translations = {
       title: "Cửa hàng của chúng tôi",
       branch: "Chi nhánh",
     },
-    customerAccount: {
-      myProfile: "Hồ sơ của tôi",
-      trackOrders: "Theo dõi đơn hàng",
-      language: "Ngôn ngữ",
-      tiers: {
-        new: "Thành viên Mới",
-        bronze: "Thành viên Đồng",
-        silver: "Thành viên Bạc",
-        gold: "Thành viên Vàng",
-      },
-      changePassword: "Đổi mật khẩu",
-      logout: "Đăng xuất",
-      deleteAccount: "Xóa tài khoản",
-      points: "điểm",
-      loading: "Đang tải thông tin...",
-      alerts: {
-        logout: {
-          title: "Đăng xuất",
-          message: "Bạn đã đăng xuất thành công!",
-        },
-        delete: {
-          title: "Xóa tài khoản",
-          message: "Bạn có chắc muốn xóa tài khoản này không?",
-          cancel: "Hủy",
-          confirm: "Xóa",
-          successTitle: "Đã xóa",
-          successMessage: "Tài khoản của bạn đã được xóa.",
-          errorTitle: "Lỗi",
-          errorMessage:
-            "Không thể xóa tài khoản. Vui lòng đăng nhập lại và thử lại.",
-        },
-      },
-    },
+
   },
   en: {
     common: {
       ok: "OK",
       cancel: "Cancel",
       close: "Close",
+      selectLanguage: "Select language",
       termsAndConditions: "Terms & Conditions",
     },
     login: {
@@ -771,45 +742,14 @@ const translations = {
       title: "Our stores",
       branch: "Branch",
     },
-    customerAccount: {
-      myProfile: "My profile",
-      trackOrders: "Track orders",
-      language: "Language",
-      tiers: {
-        new: "New member",
-        bronze: "Bronze member",
-        silver: "Silver member",
-        gold: "Gold member",
-      },
-      changePassword: "Change password",
-      logout: "Logout",
-      deleteAccount: "Delete account",
-      points: "points",
-      loading: "Loading information...",
-      alerts: {
-        logout: {
-          title: "Logout",
-          message: "You have been logged out successfully!",
-        },
-        delete: {
-          title: "Delete account",
-          message: "Are you sure you want to delete this account?",
-          cancel: "Cancel",
-          confirm: "Delete",
-          successTitle: "Deleted",
-          successMessage: "Your account has been deleted.",
-          errorTitle: "Error",
-          errorMessage:
-            "Could not delete account. Please sign in again and try.",
-        },
-      },
-    },
+
   },
   zh: {
     common: {
       ok: "确定",
       cancel: "取消",
       close: "关闭",
+      selectLanguage: "选择语言",
       termsAndConditions: "条款与条件",
     },
     login: {
@@ -1134,38 +1074,7 @@ const translations = {
       title: "我们的商店",
       branch: "分店",
     },
-    customerAccount: {
-      myProfile: "我的资料",
-      trackOrders: "查看订单",
-      language: "语言",
-      tiers: {
-        new: "新会员",
-        bronze: "铜牌会员",
-        silver: "银牌会员",
-        gold: "金牌会员",
-      },
-      changePassword: "修改密码",
-      logout: "登出",
-      deleteAccount: "删除账号",
-      points: "积分",
-      loading: "正在加载信息...",
-      alerts: {
-        logout: {
-          title: "登出",
-          message: "您已成功登出！",
-        },
-        delete: {
-          title: "删除账号",
-          message: "您确定要删除此账号吗？",
-          cancel: "取消",
-          confirm: "删除",
-          successTitle: "已删除",
-          successMessage: "您的账号已被删除。",
-          errorTitle: "错误",
-          errorMessage: "无法删除账号。请重新登录并重试。",
-        },
-      },
-    },
+
     terms: {
       updated: "更新日期：17/11/2025",
       intro: "欢迎使用 BurgerFast。使用本应用即表示您同意以下条款与条件。请在使用前仔细阅读。",

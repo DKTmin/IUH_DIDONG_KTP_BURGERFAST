@@ -340,6 +340,18 @@ export default function CartScreen() {
               const orderId = await createOrder(orderData);
 
               if (orderId) {
+                // Award 10 points to the user for a successful order
+                try {
+                  const userRef = doc(db, "users", user.uid);
+                  const userSnap = await getDoc(userRef);
+                  const currentPoints = userSnap.exists()
+                    ? (userSnap.data() as any).points || 0
+                    : 0;
+                  await updateDoc(userRef, { points: currentPoints + 10 });
+                } catch (err) {
+                  console.warn("Failed to award points:", err);
+                }
+
                 // Clear local payment method state
                 setPaymentMethod(null);
 

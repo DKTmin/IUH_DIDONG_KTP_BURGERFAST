@@ -7,12 +7,14 @@ import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import LanguageSelector from "../components/LanguageSelector";
 import { auth, db } from "../config/firebaseConfig";
 import useTranslation from "../hooks/useTranslation";
 
@@ -23,7 +25,8 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
-  const { t } = useTranslation();
+  const { t, setLanguage, language } = useTranslation();
+  const [languageModalVisible, setLanguageModalVisible] = useState(false);
 
   // ✅ Kiểm tra hợp lệ
   const validate = () => {
@@ -62,7 +65,7 @@ export default function LoginScreen() {
         const role = userData.role || "customer";
 
         if (role === "customer") {
-          router.push("/(customer)/home");
+          router.push("/(customer)/home" as any);
         } else if (role === "admin") {
           // router.push("/(admin)/dashboard");
         } else {
@@ -149,6 +152,10 @@ export default function LoginScreen() {
             ]}
             placeholder={t('login.passwordPlaceholder')}
             secureTextEntry={!showPassword}
+            placeholderTextColor="#888"
+            selectionColor="#000"
+            autoCapitalize="none"
+            textContentType="password"
             value={password}
             onChangeText={(text) => {
               setPassword(text);
@@ -167,6 +174,34 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Language selector (show flag + name) */}
+      <TouchableOpacity onPress={() => setLanguageModalVisible(true)} style={{ marginTop: 12, alignItems: 'center' }}>
+        <Text style={{ color: "#666", textAlign: "center" }}>
+          {(
+            {
+              vi: '🇻🇳',
+              en: '🇬🇧',
+              zh: '🇨🇳',
+            } as Record<string, string>
+          )[language || 'vi']}{' '}{t(`languages.${language || 'vi'}`)}
+        </Text>
+      </TouchableOpacity>
+
+      <Modal visible={languageModalVisible} transparent animationType="fade" onRequestClose={() => setLanguageModalVisible(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ width: 320, backgroundColor: '#fff', borderRadius: 8, padding: 12 }}>
+            <LanguageSelector
+              current={language}
+              onSelect={(l: 'vi' | 'en' | 'zh') => {
+                setLanguage?.(l);
+                setLanguageModalVisible(false);
+              }}
+              onClose={() => setLanguageModalVisible(false)}
+            />
+          </View>
+        </View>
+      </Modal>
 
       {/* Nút đăng nhập */}
       <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
@@ -236,6 +271,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     marginTop: 5,
+    color: '#000',
   },
   inputError: {
     borderColor: "red",
@@ -243,6 +279,7 @@ const styles = StyleSheet.create({
   passwordContainer: {
     flexDirection: "row",
     alignItems: "center",
+    position: 'relative',
   },
   eyeButton: {
     position: "absolute",

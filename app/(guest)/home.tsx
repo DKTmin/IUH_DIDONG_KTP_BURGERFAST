@@ -74,9 +74,7 @@ export default function HomeScreen() {
           />
           <Text style={styles.brandName}>BURGERFAST</Text>
         </View>
-        <TouchableOpacity>
-          <Ionicons name="notifications-outline" size={26} color="#333" />
-        </TouchableOpacity>
+        {/* notifications icon removed per request */}
       </View>
 
       {/* Mục bạn sẽ thích */}

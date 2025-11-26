@@ -26,7 +26,7 @@ type Product = {
 // Google Gemini Pro API endpoint và key
 const AI_API_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
-const AI_API_KEY = "YOUR_GEMINI_API_KEY_HERE"; // Thay bằng key của bạn
+const AI_API_KEY = "AIzaSyAFn--lT3_W3XGnxNk4pEZ9wMNwrKZFJCc"; // Thay bằng key của bạn
 
 interface ChatAssistantProps {
   cartActive: boolean;
