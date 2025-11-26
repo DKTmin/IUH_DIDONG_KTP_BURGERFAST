@@ -539,9 +539,9 @@ export default function CartScreen() {
                             const parts =
                               typeof suggestion === "string"
                                 ? suggestion
-                                    .split(",")
-                                    .map((p) => p.trim())
-                                    .slice(0, 3)
+                                  .split(",")
+                                  .map((p) => p.trim())
+                                  .slice(0, 3)
                                 : suggestion.parts || [display];
 
                             const primary = parts[0] || display;
@@ -1003,7 +1003,7 @@ function SuggestedProductCard({ product, onAdd }: any) {
   const displayPrice =
     product.sizes && product.sizes.length > 0
       ? product.sizes.find((s: any) => s.key === "small")?.price ||
-        product.price
+      product.price
       : product.price;
 
   return (
@@ -1055,7 +1055,7 @@ function SizeSelectionModal({ visible, product, onClose, onConfirm, t }: any) {
                 style={[
                   styles.modalSizeButton,
                   selectedSize?.key === size.key &&
-                    styles.modalSizeButtonActive,
+                  styles.modalSizeButtonActive,
                 ]}
                 onPress={() => setSelectedSize(size)}
               >
@@ -1063,7 +1063,7 @@ function SizeSelectionModal({ visible, product, onClose, onConfirm, t }: any) {
                   style={[
                     styles.modalSizeButtonText,
                     selectedSize?.key === size.key &&
-                      styles.modalSizeButtonTextActive,
+                    styles.modalSizeButtonTextActive,
                   ]}
                 >
                   {size.name} - {size.price.toLocaleString("vi-VN")} đ
